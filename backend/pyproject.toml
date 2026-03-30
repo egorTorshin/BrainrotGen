@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "brainrot-backend"
+version = "0.1.0"
+description = "Backend skeleton for BrainrotGen."
+authors = ["BrainrotGen Team <team@example.com>"]
+readme = "README.md"
+packages = [{ include = "brainrot_backend", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "*"
+uvicorn = { extras = ["standard"], version = "*" }
+pydantic-settings = "*"
+sqlalchemy = "*"
+aiosqlite = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-cov = "*"
+black = "*"
+flake8 = "*"
+bandit = "*"
+radon = "*"
+httpx = "*"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --cov=src/brainrot_backend --cov-report=term-missing --cov-fail-under=60"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".venv", ".pytest_cache", "dist", "build"]
+
+[tool.bandit]
+targets = ["src"]
+skips = ["B101"]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
