@@ -29,9 +29,6 @@ RUN wget -O piper.tar.gz https://github.com/rhasspy/piper/releases/latest/downlo
 
 COPY . .
 
-VOLUME data /app/data
-VOLUME output /app/output
-
 RUN mkdir -p /app/output
 
 CMD ["python", "main.py"]

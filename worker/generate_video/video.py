@@ -13,9 +13,16 @@ def merge_video_audio_subs(
         "-y",
         "-i", str(video_path),
         "-i", str(audio_path),
+
+        "-map", "0:v",
+        "-map", "1:a",
+
         "-vf", f"subtitles={srt_path.as_posix()}:force_style='Fontsize=24,Outline=2,Alignment=2'",
+
         "-c:v", "libx264",
         "-c:a", "aac",
+
         "-shortest",
+
         str(output_path)
     ], check=True)
