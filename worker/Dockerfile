@@ -8,6 +8,17 @@ RUN apt-get update && apt-get install -y \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install poetry
+
+# Копируем файлы зависимостей ПОЭТОМУ (для кэширования)
+COPY pyproject.toml poetry.lock ./
+
+# Устанавливаем зависимости Python через Poetry
+RUN poetry install --no-ansi --no-interaction --no-root
+
+# Отключаем создание виртуального окружения (в Docker оно не нужно)
+ENV POETRY_VIRTUALENVS_CREATE=false
+
 WORKDIR /app
 
 # Piper
@@ -17,6 +28,9 @@ RUN wget -O piper.tar.gz https://github.com/rhasspy/piper/releases/latest/downlo
     && chmod +x /app/piper/piper
 
 COPY . .
+
+VOLUME data /app/data
+VOLUME output /app/output
 
 RUN mkdir -p /app/output
 

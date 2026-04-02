@@ -1,9 +1,9 @@
 from pathlib import Path
 import uuid
 
-from worker.tts import text_to_speech
-from worker.subtitles import generate_srt
-from worker.video import merge_video_audio_subs
+from .tts import text_to_speech
+from .subtitles import generate_srt
+from .video import merge_video_audio_subs
 
 OUTPUT_DIR = Path("/app/output")
 
@@ -26,5 +26,9 @@ def run_pipeline(text: str, video_path: Path) -> Path:
         srt_path=srt_path,
         output_path=output_video
     )
+
+    print(f"OUTPUT_DIR exists: {OUTPUT_DIR.exists()}")
+    print(f"Writing SRT to: {srt_path}")
+    print(f"Writing video to: {output_video}")
 
     return output_video
