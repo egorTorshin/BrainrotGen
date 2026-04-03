@@ -11,6 +11,7 @@ def merge_video_audio_subs(
     subprocess.run([
         "ffmpeg",
         "-y",
+        "-stream_loop", "-1",
         "-i", str(video_path),
         "-i", str(audio_path),
 

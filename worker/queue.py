@@ -1,33 +1,38 @@
 def fetch_and_lock_job(conn):
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, text
-        FROM jobs
-        WHERE status = 'queued'
-        ORDER BY created_at
-        LIMIT 1
-    """)
-    row = cursor.fetchone()
+    try:
+        cursor.execute("BEGIN IMMEDIATE")
 
-    if not row:
-        return None
+        cursor.execute("""
+            SELECT id, text
+            FROM jobs
+            WHERE status = 'queued'
+            ORDER BY created_at
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
 
-    job_id, text = row
+        if not row:
+            conn.commit()
+            return None
 
-    cursor.execute("""
-        UPDATE jobs
-        SET status = 'processing',
-            started_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND status = 'queued'
-    """, (job_id,))
+        job_id, text = row
 
-    if cursor.rowcount == 0:
-        return None
+        cursor.execute("""
+            UPDATE jobs
+            SET status = 'processing',
+                started_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """ , (job_id,))
 
-    conn.commit()
+        conn.commit()
 
-    return {
-        "id": job_id,
-        "text": text
-    }
+        return {
+            "id": job_id,
+            "text": text
+        }
+
+    except:
+        conn.rollback()
+        raise

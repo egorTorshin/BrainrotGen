@@ -1,15 +1,17 @@
 from pathlib import Path
 from generate_video.pipeline import run_pipeline
+from db import get_conn
 
-def process_job(conn, job):
-    cursor = conn.cursor()
+def process_job(job):
     job_id = job["id"]
     text = job["text"]
 
     try:
-        video_path = Path("/app/assets/sample-5s.mp4")
-
+        video_path = Path("/app/assets/night_parcour.mp4")
         result = run_pipeline(text, video_path)
+
+        conn = get_conn()
+        cursor = conn.cursor()
 
         cursor.execute("""
             UPDATE jobs
@@ -19,7 +21,13 @@ def process_job(conn, job):
             WHERE id = ?
         """, (str(result), job_id))
 
+        conn.commit()
+        conn.close()
+
     except Exception as e:
+        conn = get_conn()
+        cursor = conn.cursor()
+
         cursor.execute("""
             UPDATE jobs
             SET status = 'failed',
@@ -28,4 +36,5 @@ def process_job(conn, job):
             WHERE id = ?
         """, (str(e), job_id))
 
-    conn.commit()
+        conn.commit()
+        conn.close()

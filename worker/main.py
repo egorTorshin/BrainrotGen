@@ -1,22 +1,23 @@
 import time
-
-
 from db import get_conn
 from queue import fetch_and_lock_job
 from process import process_job
 
 
 def main():
-    conn = get_conn()
-
     print("Worker started...")
 
     while True:
-        job = fetch_and_lock_job(conn)
+        conn = get_conn()
+
+        try:
+            job = fetch_and_lock_job(conn)
+        finally:
+            conn.close()
 
         if job:
             print(f"Processing job {job['id']}")
-            process_job(conn, job)
+            process_job(job)  # БЕЗ conn
         else:
             time.sleep(1)
 

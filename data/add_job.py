@@ -1,17 +1,20 @@
 import sqlite3
 
-conn = sqlite3.connect("data/app.db")
+def add_job(job_id, text):
+    conn = sqlite3.connect("data/app.db", timeout=30)
+    try:
+        conn.execute("""
+        INSERT INTO jobs (id, text, status)
+        VALUES (?, ?, ?)
+        """, (job_id, text, "queued"))
+        conn.commit()
+    finally:
+        conn.close()
 
-conn.execute("""
-INSERT INTO jobs (id, text, status)
-VALUES (?, ?, ?)
-""", (
-    "job2",
-    "I've seen slime blocks with better coordination than me. At this point, the void isn't my enemy — it's my emotional support pit. Please send more than just arrows; send a ladder to my dignity.",
-    "queued"
-))
 
-conn.commit()
-conn.close()
+add_job(
+    "job8",
+    "I've seen gold blocks with better coordination than me...",
+)
 
 print("Job added")

@@ -5,6 +5,9 @@ os.makedirs("data", exist_ok=True)
 
 conn = sqlite3.connect("data/app.db")
 
+conn.execute("PRAGMA journal_mode=WAL;")
+conn.execute("PRAGMA synchronous=NORMAL;")
+
 conn.execute("""
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
