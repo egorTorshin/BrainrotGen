@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     sqlite_file: str = Field(default="brainrotgen.db")
     database_url: str | None = Field(default=None)
 
+    jwt_secret: str = Field(default="change-me-in-production")
+    access_token_expire_minutes: int = Field(default=1440)
+    daily_quota_seconds: int = Field(default=300)
+
     @property
     def resolved_database_url(self) -> str:
         """Return an explicit DB URL or derive one from sqlite_file."""

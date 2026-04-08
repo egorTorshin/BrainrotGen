@@ -13,6 +13,9 @@ uvicorn = { extras = ["standard"], version = "*" }
 pydantic-settings = "*"
 sqlalchemy = "*"
 aiosqlite = "*"
+pyjwt = "*"
+passlib = { extras = ["bcrypt"], version = "*" }
+greenlet = "^3.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
