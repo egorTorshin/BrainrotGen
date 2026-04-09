@@ -1,27 +1,36 @@
-import sqlite3
+"""
+Legacy helper: optional SQLite PRAGMAs on an existing database file.
+
+The canonical schema is created by the FastAPI app (SQLAlchemy ``create_all``).
+Run the backend once before using the worker, or use ``docker compose up backend``.
+
+Do not use this script to CREATE TABLE — it will conflict with the ORM schema.
+"""
+
 import os
+import sqlite3
+from pathlib import Path
 
-os.makedirs("data", exist_ok=True)
+ROOT = Path(__file__).resolve().parent
+DB = ROOT / "app.db"
 
-conn = sqlite3.connect("data/app.db")
 
-conn.execute("PRAGMA journal_mode=WAL;")
-conn.execute("PRAGMA synchronous=NORMAL;")
+def main() -> None:
+    if not DB.exists():
+        print(
+            f"No database at {DB}. Start the backend first to create tables, "
+            "or copy a migrated app.db here.",
+        )
+        return
+    conn = sqlite3.connect(os.fspath(DB))
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+        conn.commit()
+        print(f"Applied PRAGMA on existing {DB}")
+    finally:
+        conn.close()
 
-conn.execute("""
-CREATE TABLE IF NOT EXISTS jobs (
-    id TEXT PRIMARY KEY,
-    text TEXT,
-    status TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    started_at DATETIME,
-    finished_at DATETIME,
-    result_path TEXT,
-    error TEXT
-);
-""")
 
-conn.commit()
-conn.close()
-
-print("DB created")
+if __name__ == "__main__":
+    main()
