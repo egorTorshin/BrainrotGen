@@ -35,6 +35,11 @@ RUN wget -O /app/piper_voice/en_GB-alba-medium.onnx \
 RUN wget -O /app/piper_voice/en_GB-alba-medium.onnx.json \
     https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/en_GB-alba-medium.onnx.json
 
+RUN wget -O /app/piper_voice/en_US-lessac-medium.onnx \
+    https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
+
+RUN wget -O /app/piper_voice/en_US-lessac-medium.onnx.json \
+    https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
 
 COPY . .
 
