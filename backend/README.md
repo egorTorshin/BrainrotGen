@@ -29,6 +29,14 @@ poetry run uvicorn brainrot_backend.main:app --app-dir src --reload
 
 Open docs: `http://127.0.0.1:8000/docs`
 
+## Result file download
+
+After a job finishes (`status: done`), the video can be fetched with a JWT:
+
+`GET /api/v1/jobs/{job_id}/result`
+
+Set `MEDIA_ROOT` in `.env` to the same directory the worker writes to (e.g. `output` or `/app/output` in Docker).
+
 ## Quality Commands
 
 ```bash
