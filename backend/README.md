@@ -21,11 +21,21 @@ Optional local configuration:
 cp .env.example .env
 ```
 
+The default SQLite file is **`data/app.db`** (same as the worker). Ensure the `data/` directory exists or start once so the app creates it.
+
 Run the API (from `backend/`):
 
 ```bash
 poetry run uvicorn brainrot_backend.main:app --app-dir src --reload
 ```
+
+### Docker (from repository root)
+
+```bash
+docker compose up --build backend
+```
+
+Uses `./data` and `./output` volumes; set `MEDIA_ROOT=/app/output` in compose for alignment with the worker.
 
 Open docs: `http://127.0.0.1:8000/docs`
 

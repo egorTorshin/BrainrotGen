@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,11 @@ import brainrot_backend.models  # noqa: F401  — register all ORM models
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Initialize DB engine and create tables on startup, dispose on shutdown"""
+    settings = get_settings()
+    if not settings.database_url:
+        Path(settings.sqlite_file).parent.mkdir(parents=True, exist_ok=True)
+    Path(settings.media_root).mkdir(parents=True, exist_ok=True)
+
     initialize_database_engine()
     engine = get_database_engine()
     async with engine.begin() as conn:
