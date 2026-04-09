@@ -17,16 +17,16 @@ Worker — это фоновый процесс, который:
 ```commandline
 BrainrotGen/
 ├── data/
-│ ├── app.db
-│ ├── init_db.py
-│ ├── add_job.py
-│ ├── check.py
+│ ├── app.db          # shared with FastAPI (see backend SQLITE_FILE)
+│ ├── init_db.py      # optional PRAGMA only; schema from API
+│ ├── add_job.py      # debug enqueue only
 │
-├── output/
+├── output/           # generated videos (same as backend MEDIA_ROOT)
 │
 ├── worker/
 │ ├── assets/
-│ │ └── night_parcour.mp4
+│ │ ├── minecraft/    # .mp4 clips (random pick)
+│ │ └── subway/
 │ │
 │ ├── generate_video/
 │ │ ├── pipeline.py
@@ -35,7 +35,7 @@ BrainrotGen/
 │ │ ├── video.py
 │ │
 │ ├── db.py
-│ ├── queue.py
+│ ├── job_queue.py
 │ ├── process.py
 │ ├── main.py
 │ ├── Dockerfile
@@ -48,65 +48,27 @@ BrainrotGen/
 
 ---
 
-# База данных (SQLite: `jobs`)
+# База данных (SQLite)
 
-## Таблица `jobs`
+Файл по умолчанию: **`data/app.db`** (локально) или **`/app/data/app.db`** в Docker.  
+**Схему создаёт FastAPI** при старте (`SQLAlchemy create_all`). Worker только читает/обновляет строки.
 
-```sql
-CREATE TABLE jobs (
-    id TEXT PRIMARY KEY,
-    text TEXT,
-    status TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    started_at DATETIME,
-    finished_at DATETIME,
-    result_path TEXT,
-    error TEXT
-);
-```
+## Таблица `jobs` (соответствует ORM в backend)
 
-## Поля таблицы
-```sql
-id
-```
-Уникальный идентификатор задачи.
-```sql
-text
-```
-Входной текст для генерации:
-- используется для TTS (Piper)
-- используется для генерации субтитров
-```sql
-status
-```
-Состояние задачи:
-- status	- значение
-- queued -	ожидает обработки
-- processing -	выполняется worker’ом
-- done	- успешно завершена
-- failed - ошибка
-- created_at
+| Колонка | Описание |
+|--------|----------|
+| `id` | UUID задачи (TEXT PK) |
+| `user_id` | FK на `users.id`, может быть NULL (отладочные вставки) |
+| `text` | Текст озвучки и субтитров |
+| `voice` | `male` / `female` — выбор модели Piper |
+| `background` | `minecraft` / `subway` — папка ассетов |
+| `status` | `queued` → `processing` → `done` \| `failed` |
+| `estimated_duration` | Оценка секунд (учёт квоты на API) |
+| `created_at`, `started_at`, `finished_at` | Временные метки |
+| `result_path` | Путь к готовому `.mp4` (часто `/app/output/<job_id>.mp4`) |
+| `error` | Текст ошибки при `failed` |
 
-Время создания задачи.
-```sql
-started_at
-```
-Когда worker начал обработку.
-```sql
-finished_at
-```
-Когда обработка завершилась.
-```sql
-result_path
-```
-Путь к итоговому видео:
-```bash
-/app/output/<uuid>.mp4
-```
-```bash
-error
-```
-Текст ошибки при падении pipeline.
+Таблица `users` создаётся API; для нормального сценария задачи создаются через **POST /api/v1/jobs**.
 
 # Как запускается worker
 ## Через Docker Compose
@@ -130,62 +92,39 @@ update DB
 # Pipeline генерации видео
 ## Входные данные
 
-- jobs.text
-- worker/assets/night_parcour.mp4
+- `jobs.text`, `jobs.voice`, `jobs.background`
+- случайный `.mp4` из `worker/assets/minecraft/` или `worker/assets/subway/` (`generate_video/backgrounds.py`)
 
-### 1. Text-to-Speech (Piper)
+### 1. Text-to-Speech
 
-Файл:
+`generate_video/tts.py`
 
-```generate_video/tts.py```
+- По умолчанию **Piper**: `male` → `en_US-lessac`, `female` → `en_GB-alba`.
+- Опционально: `TTS_BACKEND=http` и `TTS_HTTP_URL` — POST с JSON `{"text": "..."}`, ответ — сырой аудиофайл (например WAV).
 
-Процесс:
+Аудио: `OUTPUT_DIR/<job_id>.wav`
 
-- текст → Piper
-- создаётся аудио файл: \
-```output/<uuid>.wav```
 ### 2. Субтитры
 
-Файл:
+`generate_video/subtitles.py` → `OUTPUT_DIR/<job_id>.srt`
 
-```generate_video/subtitles.py```
+### 3. Сборка (FFmpeg)
 
-- текст разбивается на строки
-- генерируется .srt \
-```output/<uuid>.srt```
-### 3. Сборка видео (FFmpeg)
+`generate_video/video.py` — наложение аудио и субтитров на выбранный клип.
 
-Файл:
+Итог: **`OUTPUT_DIR/<job_id>.mp4`** (имя совпадает с id задачи).
 
-```generate_video/video.py```
-
-Используется:
-
-- фон: ```worker/assets/night_parcour.mp4```
-- аудио: .wav
-- субтитры: .srt
-
-Результат:
-
-- финальный .mp4
-
-### Итоговый результат
-```output/<uuid>.mp4```
 ## Output (результаты)
 
-Все результаты сохраняются в:
+Каталог задаётся переменной **`OUTPUT_DIR`** (в Docker: `/app/output`, локально обычно `./output`).
 
-```/app/output/```\
-Файлы:
-- <uuid>.wav — аудио (TTS)
-- <uuid>.srt — субтитры
-- <uuid>.mp4 — итоговое видео
+Файлы на один job: `<job_id>.wav`, `<job_id>.srt`, `<job_id>.mp4`.
 ### Обновление базы данных
 #### Успешное выполнение
 ```sql
 UPDATE jobs
 SET status = 'done',
-    result_path = '/app/output/<uuid>.mp4',
+    result_path = '/app/output/<job_id>.mp4',
     finished_at = CURRENT_TIMESTAMP
 WHERE id = ?
 ```
@@ -199,19 +138,7 @@ WHERE id = ?
 ```
 ## Видео-источник (assets)
 
-Сейчас используется:
-
-```worker/assets/night_parcour.mp4```
-### Роль:
-- фон для всех видео
-- пока статический
-## Планируемое улучшение
-
-Добавить в БД:
-
-```video_path TEXT```
-
-И позволить каждому job использовать свой фон.
+Корень: **`ASSETS_ROOT`** (по умолчанию `/app/assets`). Подкаталоги **`minecraft/`** и **`subway/`** — положите туда несколько `.mp4`; для каждого job выбирается случайный файл.
 
 # Итог архитектуры
 ```
@@ -227,7 +154,7 @@ Subtitles (.srt)
     ↓
 FFmpeg merge
     ↓
-output/<uuid>.mp4
+output/<job_id>.mp4
     ↓
 DB update (done/failed)
 ```

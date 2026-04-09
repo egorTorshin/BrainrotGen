@@ -1,6 +1,6 @@
 import time
 from db import get_conn
-from queue import fetch_and_lock_job
+from job_queue import fetch_and_lock_job
 from process import process_job
 
 
