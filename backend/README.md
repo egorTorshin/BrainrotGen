@@ -37,6 +37,16 @@ After a job finishes (`status: done`), the video can be fetched with a JWT:
 
 Set `MEDIA_ROOT` in `.env` to the same directory the worker writes to (e.g. `output` or `/app/output` in Docker).
 
+## Tests
+
+Tests use a **temporary SQLite file and media directory** (set in `tests/conftest.py` via `pytest_configure`) so they do not touch local `brainrotgen.db`
+
+```bash
+poetry run pytest
+```
+
+Coverage threshold is **≥ 60%** (per Quality Plan); the suite currently exercises health, auth, jobs, quota (including **429** when the daily limit is exceeded), result download, and `estimate_duration`.
+
 ## Quality Commands
 
 ```bash
