@@ -211,3 +211,9 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 
+# Worker — тяжёлые игровые клипы (локально; .gitkeep остаётся в репо)
+worker/assets/**/*.mp4
+
+# Сгенерированные артефакты (worker + отдача API), см. MEDIA_ROOT / OUTPUT_DIR
+output/
+
