@@ -13,11 +13,12 @@ PIPER_BIN = BASE_DIR / "piper/piper"
 # Female: existing alba; male: lessac (downloaded in Dockerfile)
 VOICE_MODELS = {
     "female": BASE_DIR / "piper_voice/en_GB-alba-medium.onnx",
-    "male": BASE_DIR / "piper_voice/en_US-lessac-medium.onnx",
+    "male": BASE_DIR / "piper_voice/en_GB-northern_english_male-medium.onnx",
 }
 
 
 def _piper_tts(text: str, model_path: Path, output_file: Path) -> Path:
+    """Run Piper CLI to synthesize speech from text."""
     subprocess.run(
         [
             str(PIPER_BIN),
@@ -33,6 +34,7 @@ def _piper_tts(text: str, model_path: Path, output_file: Path) -> Path:
 
 
 def _http_tts(text: str, output_file: Path) -> Path:
+    """Use external HTTP API for TTS (alternative to Piper)."""
     url = os.environ.get("TTS_HTTP_URL", "").strip()
     if not url:
         raise RuntimeError("TTS_BACKEND=http but TTS_HTTP_URL is not set")
@@ -51,6 +53,15 @@ def _http_tts(text: str, output_file: Path) -> Path:
 def text_to_speech(text: str, voice: str, job_id: str, out_dir: Path) -> Path:
     """
     Synthesize speech to a WAV file under *out_dir* named with *job_id*.
+
+    Args:
+        text: Text to synthesize
+        voice: "male" or "female"
+        job_id: Unique job identifier for output filename
+        out_dir: Output directory for WAV file
+
+    Returns:
+        Path to generated WAV file
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     output_file = out_dir / f"{job_id}.wav"
@@ -74,6 +85,8 @@ def text_to_speech(text: str, voice: str, job_id: str, out_dir: Path) -> Path:
                 model_path = fallback
                 break
         else:
-            raise FileNotFoundError(f"No Piper model found under {BASE_DIR / 'piper_voice'}")
+            raise FileNotFoundError(
+                f"No Piper model found under {BASE_DIR / 'piper_voice'}"
+            )
 
     return _piper_tts(text, model_path, output_file)

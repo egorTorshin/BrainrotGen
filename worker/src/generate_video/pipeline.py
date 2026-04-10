@@ -20,7 +20,8 @@ def run_pipeline(
     video_path: Path,
 ) -> Path:
     """
-    TTS → SRT → ffmpeg merge. Output files use *job_id* so ``result_path`` matches the job row.
+    TTS → SRT → ffmpeg merge. Output files use *job_id*
+    so ``result_path`` matches the job row.
     """
     out = output_dir()
     out.mkdir(parents=True, exist_ok=True)

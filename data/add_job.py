@@ -1,53 +1,74 @@
-"""
-Manual enqueue helper for debugging only.
-
-Prefer creating jobs via the FastAPI API (POST /api/v1/jobs) so quota and fields stay consistent.
-
-Requires an existing ``app.db`` with the ORM schema (start backend once).
-"""
-
-import os
+# add_job_direct.py
 import sqlite3
 import uuid
+from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-DB_PATH = ROOT / "app.db"
+# Путь к БД (измените под свой путь)
+# Варианты:
+# 1. Если БД на хосте
+DB_PATH = Path(__file__).parent / "app.db"
 
 
-def add_job(text: str, job_id: str | None = None) -> str:
-    jid = job_id or str(uuid.uuid4())
-    conn = sqlite3.connect(os.fspath(DB_PATH), timeout=30)
+# 2. Если в Docker, используйте docker cp или подключение
+# 3. Или укажите полный путь: Path("/app/data/app.db")
+
+def add_job(text: str, voice: str = "male", background: str = "minecraft", user_id: int = 1):
+    """Добавить задачу в очередь"""
+    job_id = str(uuid.uuid4())
+
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+
     try:
-        conn.execute(
-            """
+        cursor.execute("""
             INSERT INTO jobs (
-                id, user_id, text, voice, background, status,
-                estimated_duration, created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """,
-            (
-                jid,
-                None,
-                text,
-                "male",
-                "minecraft",
-                "queued",
-                60.0,
-            ),
-        )
+                id, user_id, text, voice, background, 
+                status, created_at
+            ) VALUES (?, ?, ?, ?, ?, 'queued', ?)
+        """, (job_id, user_id, text, voice, background, datetime.now()))
+
         conn.commit()
+        print(f"✅ Job added successfully!")
+        print(f"   ID: {job_id}")
+        print(f"   Text: {text[:50]}...")
+        return job_id
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        conn.rollback()
+        return None
     finally:
         conn.close()
-    return jid
+
+
+def show_jobs(limit=5):
+    """Показать последние задачи"""
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, text, status, created_at 
+        FROM jobs 
+        ORDER BY created_at DESC 
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    print("\n📋 Recent jobs:")
+    for row in rows:
+        print(f"   {row[0][:8]}... | {row[2]} | {row[3]} | {row[1][:30]}...")
+    conn.close()
 
 
 if __name__ == "__main__":
-    if not DB_PATH.exists():
-        raise SystemExit(f"Missing {DB_PATH}; start the backend once to create the schema.")
+    import sys
 
-    jid = add_job(
-        "I've seen gold blocks with better coordination than me...",
-    )
-    print(f"Inserted job {jid}")
+    if len(sys.argv) > 1:
+        text = " ".join(sys.argv[1:])
+        add_job(text)
+        show_jobs()
+    else:
+        # Интерактивный режим
+        text = input("Enter job text: ")
+        add_job(text)
+        show_jobs()
