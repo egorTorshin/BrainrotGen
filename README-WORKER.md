@@ -13,6 +13,29 @@ Worker — это фоновый процесс, который:
 
 ---
 
+# Качество кода (Quality Gates)
+|Проверка	| Результат | 	Статус |
+|-|-|------|
+|Unit Tests | 49/49 passed | 100% |
+|Coverage |	86%	|  ≥60% |
+|Black formatting |	9 files| OK   | 0 violations|
+|Flake8 style |	0 errors	| +    |
+|Bandit security	| 0 med/high	| +    |
+|Radon MI	| Все файлы A (≥67)	| ≥65  |
+|Radon CC |	B (7.5 average)| <10  |
+
+
+## Запуск всех проверок
+```bash
+poetry run black --check src/
+poetry run flake8 src/ --max-line-length=88
+poetry run bandit -r src/ -ll
+poetry run radon mi src/ -s
+poetry run radon cc src/ -a -nb --min B
+poetry run pytest tests/ -v --cov=src --cov-fail-under=60
+```
+---
+
 # Структура проекта
 ```commandline
 BrainrotGen/
@@ -24,25 +47,26 @@ BrainrotGen/
 │
 ├── output/
 │
-├── worker/
-│ ├── assets/
-│ │ └── night_parcour.mp4
-│ │
-│ ├── generate_video/
-│ │ ├── pipeline.py
-│ │ ├── tts.py
-│ │ ├── subtitles.py
-│ │ ├── video.py
-│ │
-│ ├── db.py
-│ ├── queue.py
-│ ├── process.py
-│ ├── main.py
-│ ├── Dockerfile
-│ ├── pyproject.toml
-│ ├── poetry.lock
+├── ├── worker/
+│   ├── assets/                   # Видео-фоны
+│   │   └── minecraft.mp4
+│   │   └── subway.mp4
+│   │
+│   ├── generate_video/           # Модули генерации
+│   │   ├── pipeline.py           # Оркестрация пайплайна
+│   │   ├── tts.py                # Text-to-Speech (Piper/HTTP)
+│   │   ├── subtitles.py          # Генерация SRT
+│   │   └── video.py              # FFmpeg сборка
+│   │
+│   ├── db.py                     # Подключение к БД
+│   ├── job_queue.py              # Очередь задач (блокировки)
+│   ├── process.py                # Обработка одной задачи
+│   ├── main.py                   # Основной цикл воркера
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   └── poetry.lock
 │
-├── docker-compose.yml
+└── docker-compose.yml
 ```
 
 
@@ -54,14 +78,19 @@ BrainrotGen/
 
 ```sql
 CREATE TABLE jobs (
-    id TEXT PRIMARY KEY,
-    text TEXT,
-    status TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id VARCHAR(36) PRIMARY KEY,
+    user_id INTEGER,
+    text TEXT NOT NULL,
+    voice VARCHAR(32) NOT NULL,
+    background VARCHAR(32) NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    estimated_duration FLOAT,
+    created_at DATETIME NOT NULL,
     started_at DATETIME,
     finished_at DATETIME,
-    result_path TEXT,
-    error TEXT
+    result_path VARCHAR(256),
+    error TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id)
 );
 ```
 
@@ -142,6 +171,8 @@ update DB
 Процесс:
 
 - текст → Piper
+- поддержка male/female голосов
+- fallback при отсутствии модели
 - создаётся аудио файл: \
 ```output/<uuid>.wav```
 ### 2. Субтитры
@@ -151,6 +182,7 @@ update DB
 ```generate_video/subtitles.py```
 
 - текст разбивается на строки
+- равномерное распределение по длительности аудио
 - генерируется .srt \
 ```output/<uuid>.srt```
 ### 3. Сборка видео (FFmpeg)
