@@ -12,8 +12,8 @@ export default function Preview({ jobId, onBack }: { jobId: string; onBack: () =
 
       setStatus(data.status);
 
-      if (data.status === "done" && data.url) {
-        setUrl(data.url);
+      if (data.status === "done" && data.result_path) {
+        setUrl(`http://127.0.0.1:8000${data.result_path}`);
         clearInterval(interval);
       }
 

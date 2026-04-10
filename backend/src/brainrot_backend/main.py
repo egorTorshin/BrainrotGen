@@ -1,5 +1,8 @@
 """ASGI application entrypoint"""
 
+from fastapi.staticfiles import StaticFiles
+import os
+
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
@@ -40,6 +43,15 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         description="Backend API for BrainrotGen",
         lifespan=lifespan,
+    )
+
+    output_dir = os.path.abspath("../output")
+    os.makedirs(output_dir, exist_ok=True)
+
+    application.mount(
+        "/output",
+        StaticFiles(directory=output_dir),
+        name="output",
     )
 
     application.add_middleware(
