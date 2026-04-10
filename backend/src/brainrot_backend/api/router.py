@@ -1,0 +1,8 @@
+"""Root API router."""
+
+from fastapi import APIRouter
+
+from brainrot_backend.api.v1.router import router as api_v1_router
+
+api_router = APIRouter()
+api_router.include_router(api_v1_router)
