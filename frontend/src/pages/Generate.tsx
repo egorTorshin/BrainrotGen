@@ -7,14 +7,19 @@ export default function Generate({ onCreated }: { onCreated: (jobId: string) => 
   const [voice, setVoice] = useState("male");
   const [background, setBackground] = useState("minecraft");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
+    setError(null);
     setLoading(true);
-
-    const data = await createJob({ text, voice, background });
-
-    setLoading(false);
-    onCreated(data.job_id);
+    try {
+      const data = await createJob({ text, voice, background });
+      onCreated(data.job_id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create job");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,7 +47,8 @@ export default function Generate({ onCreated }: { onCreated: (jobId: string) => 
           </select>
         </div>
 
-        <button onClick={handleSubmit} disabled={loading}>
+        {error && <p style={{ color: "crimson" }}>{error}</p>}
+        <button type="button" onClick={handleSubmit} disabled={loading}>
           {loading ? "Generating..." : "Generate"}
         </button>
       </div>

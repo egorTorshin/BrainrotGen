@@ -2,13 +2,10 @@
 
 from fastapi.testclient import TestClient
 
-from brainrot_backend.main import app
 
-
-def test_health_endpoint_returns_expected_payload() -> None:
+def test_health_endpoint_returns_expected_payload(client: TestClient) -> None:
     """Health endpoint must stay stable for external checks."""
-    with TestClient(app) as client:
-        response = client.get("/api/v1/health")
+    response = client.get("/api/v1/health")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -18,10 +15,9 @@ def test_health_endpoint_returns_expected_payload() -> None:
     }
 
 
-def test_openapi_contains_health_route() -> None:
+def test_openapi_contains_health_route(client: TestClient) -> None:
     """Ensure the versioned health route stays part of API contract."""
-    with TestClient(app) as client:
-        response = client.get("/openapi.json")
+    response = client.get("/openapi.json")
 
     assert response.status_code == 200
     paths = response.json()["paths"]

@@ -1,6 +1,7 @@
 """Application settings and configuration helpers."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -25,12 +26,15 @@ class Settings(BaseSettings):
     app_version: str = Field(default=__version__)
     environment: Environment = Field(default="development")
     api_v1_prefix: str = Field(default="/api/v1")
-    sqlite_file: str = Field(default="brainrotgen.db")
+    sqlite_file: str = Field(default="data/app.db")
     database_url: str | None = Field(default=None)
 
     jwt_secret: str = Field(default="change-me-in-production")
     access_token_expire_minutes: int = Field(default=1440)
     daily_quota_seconds: int = Field(default=300)
+
+    #: Root directory for generated video files (must match worker output mount).
+    media_root: Path = Field(default=Path("output"))
 
     @property
     def resolved_database_url(self) -> str:

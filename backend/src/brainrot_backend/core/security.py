@@ -2,22 +2,27 @@
 
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from brainrot_backend.core.config import get_settings
-
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
     """Return a bcrypt hash of *password*"""
-    return _pwd_ctx.hash(password)
+    digest = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    return digest.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Check *plain* text against a bcrypt *hashed* value"""
-    return _pwd_ctx.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(
+            plain.encode("utf-8"),
+            hashed.encode("utf-8"),
+        )
+    except ValueError:
+        return False
 
 
 def create_access_token(user_id: int) -> str:

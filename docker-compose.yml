@@ -1,6 +1,36 @@
 services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://127.0.0.1:8000/api/v1
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      SQLITE_FILE: data/app.db
+      MEDIA_ROOT: /app/output
+      JWT_SECRET: change-me-in-production
+      ENVIRONMENT: development
+    working_dir: /app
+
   worker:
     build: worker
     volumes:
       - ./data:/app/data
       - ./output:/app/output
+      - ./worker/assets:/app/assets:ro
+    environment:
+      SQLITE_PATH: /app/data/app.db
+      ASSETS_ROOT: /app/assets
+      OUTPUT_DIR: /app/output
+    depends_on:
+      - backend
