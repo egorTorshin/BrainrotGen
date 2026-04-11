@@ -1,12 +1,12 @@
-FROM node:22-alpine
+FROM python:3.11
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 5173
+EXPOSE 8501
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0"]
