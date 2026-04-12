@@ -25,6 +25,18 @@ router = APIRouter()
     response_model=TokenResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new user account",
+    description=(
+        "Registers a new user in the system. "
+        "The password will be hashed using bcrypt before storage. "
+        "Returns a JWT access token upon successful registration."
+    ),
+    responses={
+        status.HTTP_201_CREATED: {"description": "User successfully created."},
+        status.HTTP_409_CONFLICT: {"description": "Username is already taken."},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error (e.g. password too short)."
+        },
+    },
 )
 async def register(
     body: RegisterRequest,
@@ -55,6 +67,14 @@ async def register(
     "/login",
     response_model=TokenResponse,
     summary="Obtain an access token",
+    description=(
+        "Authenticates a user via username and password. "
+        "If credentials are valid, returns a JWT (bearer) token valid for 24 hours."
+    ),
+    responses={
+        status.HTTP_200_OK: {"description": "Authentication successful."},
+        status.HTTP_401_UNAUTHORIZED: {"description": "Invalid credentials provided."},
+    },
 )
 async def login(
     body: LoginRequest,
