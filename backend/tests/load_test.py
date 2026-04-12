@@ -2,6 +2,7 @@ import random
 import uuid
 from locust import HttpUser, task, between, events
 
+
 class BrainrotUser(HttpUser):
     wait_time = between(1, 3)
     token = None
@@ -15,7 +16,7 @@ class BrainrotUser(HttpUser):
         # 1. Register
         resp = self.client.post(
             "/api/v1/auth/register",
-            json={"username": self.username, "password": password}
+            json={"username": self.username, "password": password},
         )
         if resp.status_code == 201:
             self.token = resp.json().get("access_token")
@@ -23,7 +24,7 @@ class BrainrotUser(HttpUser):
             # Try login if already exists (shouldn't happen with UUID)
             resp = self.client.post(
                 "/api/v1/auth/login",
-                json={"username": self.username, "password": password}
+                json={"username": self.username, "password": password},
             )
             if resp.status_code == 200:
                 self.token = resp.json().get("access_token")
@@ -49,31 +50,39 @@ class BrainrotUser(HttpUser):
         payload = {
             "text": "This is a performance test script for BrainrotGen.",
             "voice": random.choice(["male", "female"]),
-            "background": random.choice(["minecraft", "subway"])
+            "background": random.choice(["minecraft", "subway"]),
         }
-        resp = self.client.post("/api/v1/jobs", json=payload, headers=self.headers, name="/jobs (POST)")
+        resp = self.client.post(
+            "/api/v1/jobs", json=payload, headers=self.headers, name="/jobs (POST)"
+        )
 
         if resp.status_code == 201:
             job_id = resp.json().get("job_id")
             # Poll status a few times
             for _ in range(2):
-                self.client.get(f"/api/v1/jobs/{job_id}", headers=self.headers, name="/jobs/{id}")
+                self.client.get(
+                    f"/api/v1/jobs/{job_id}", headers=self.headers, name="/jobs/{id}"
+                )
 
     @task(5)
     def health_check(self):
         """Lightweight health check"""
         self.client.get("/api/v1/health", name="/health")
 
+
 @events.init_command_line_parser.add_listener
 def _(parser):
-    parser.add_argument("--p95-threshold", type=float, default=200.0, help="P95 latency threshold in ms")
+    parser.add_argument(
+        "--p95-threshold", type=float, default=200.0, help="P95 latency threshold in ms"
+    )
+
 
 @events.test_stop.add_listener
 def on_test_stop(environment, **kwargs):
     """Check if P95 requirement is met after the test"""
-    print("\n" + "="*40)
+    print("\n" + "=" * 40)
     print("PERFORMANCE GATE CHECK")
-    print("="*40)
+    print("=" * 40)
 
     p95_threshold = environment.parsed_options.p95_threshold
     all_passed = True

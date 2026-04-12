@@ -32,7 +32,9 @@ router = APIRouter()
     ),
     responses={
         status.HTTP_200_OK: {"description": "Quota info retrieved successfully."},
-        status.HTTP_401_UNAUTHORIZED: {"description": "Missing or invalid authentication token."},
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Missing or invalid authentication token."
+        },
     },
 )
 async def get_quota(

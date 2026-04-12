@@ -28,7 +28,11 @@ class HealthResponse(BaseModel):
             "description": "Service is healthy.",
             "content": {
                 "application/json": {
-                    "example": {"status": "ok", "service": "BrainrotGen-API", "version": "0.1.0"}
+                    "example": {
+                        "status": "ok",
+                        "service": "BrainrotGen-API",
+                        "version": "0.1.0",
+                    }
                 }
             },
         }

@@ -33,7 +33,9 @@ router = APIRouter()
     responses={
         status.HTTP_201_CREATED: {"description": "User successfully created."},
         status.HTTP_409_CONFLICT: {"description": "Username is already taken."},
-        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error (e.g. password too short)."},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "description": "Validation error (e.g. password too short)."
+        },
     },
 )
 async def register(

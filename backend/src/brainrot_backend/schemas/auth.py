@@ -23,8 +23,12 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     """Payload for obtaining an access token"""
 
-    username: str = Field(description="Account username", json_schema_extra={"example": "jdoe_brainrot"})
-    password: str = Field(description="Account password", json_schema_extra={"example": "strongpass123"})
+    username: str = Field(
+        description="Account username", json_schema_extra={"example": "jdoe_brainrot"}
+    )
+    password: str = Field(
+        description="Account password", json_schema_extra={"example": "strongpass123"}
+    )
 
 
 class TokenResponse(BaseModel):

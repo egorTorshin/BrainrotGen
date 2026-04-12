@@ -16,7 +16,9 @@ class CreateJobRequest(BaseModel):
         min_length=1,
         max_length=5000,
         description="Text content to be converted to speech and subtitles.",
-        json_schema_extra={"example": "Hello world, this is a brainrot video generation test."},
+        json_schema_extra={
+            "example": "Hello world, this is a brainrot video generation test."
+        },
     )
     voice: VoiceKind = Field(
         default="male",
