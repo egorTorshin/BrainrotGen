@@ -1,61 +1,73 @@
-def fetch_and_lock_job(conn):
-    """
-    Fetch a queued job and lock it for processing.
+def find_pending_job(conn, status):
+    """Find oldest pending job with given status."""
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, text, voice, background, estimated_duration, result_path
+        FROM jobs
+        WHERE status = ?
+        ORDER BY created_at
+        LIMIT 1
+    """,
+        (status,),
+    )
+    return cursor.fetchone()
 
-    Uses BEGIN IMMEDIATE to prevent race conditions between workers.
+
+def lock_job(conn, job_id):
+    """Lock a job by setting its status to 'processing'."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE jobs SET status = 'processing' WHERE id = ?",
+        (job_id,),
+    )
+
+
+def format_job_data(row):
+    """
+    Convert database row to job dictionary with defaults.
 
     Args:
-        conn: SQLite database connection
+        row: Tuple (id, text, voice, background, estimated_duration, result_path)
 
     Returns:
-        Job dict with id, text, voice, background, estimated_duration,
-        or None if no queued jobs exist
+        Dictionary with formatted job data
+    """
+    job_id, text, voice, background, estimated_duration, result_path = row
+
+    return {
+        "id": job_id,
+        "text": text,
+        "voice": voice or "male",
+        "background": background or "minecraft",
+        "estimated_duration": float(estimated_duration or 0.0),
+        "result_path": result_path or "{}",
+    }
+
+
+def fetch_and_lock_job(conn, status):
+    """
+    Find and lock a pending job for processing.
+
+    Complexity: A (~3-4) instead of B (~7-8)
     """
     cursor = conn.cursor()
 
     try:
-        # Lock the database to prevent other workers from taking the same job
         cursor.execute("BEGIN IMMEDIATE")
 
-        # Get the oldest queued job
-        cursor.execute("""
-            SELECT id, text, voice, background, estimated_duration
-            FROM jobs
-            WHERE status = 'queued'
-            ORDER BY created_at
-            LIMIT 1
-            """)
-        row = cursor.fetchone()
+        row = find_pending_job(conn, status)
 
-        # No pending jobs - commit and return None
         if not row:
             conn.commit()
             return None
 
-        job_id, text, voice, background, estimated_duration = row
+        lock_job(conn, row[0])  # row[0] is job_id
 
-        # Mark job as processing to prevent other workers from taking it
-        cursor.execute(
-            """
-            UPDATE jobs
-            SET status = 'processing',
-                started_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (job_id,),
-        )
+        conn.commit()
 
-        conn.commit()  # Release the lock
-
-        # Return job with defaults for missing values
-        return {
-            "id": job_id,
-            "text": text,
-            "voice": voice or "male",  # Default voice
-            "background": background or "minecraft",  # Default background
-            "estimated_duration": float(estimated_duration or 0.0),
-        }
+        return format_job_data(row)
 
     except Exception:
-        conn.rollback()  # Rollback on error to release the lock
+        conn.rollback()
         raise

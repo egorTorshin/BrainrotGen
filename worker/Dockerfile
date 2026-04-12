@@ -44,5 +44,6 @@ RUN wget -O /app/piper_voice/en_GB-northern_english_male-medium.onnx.json \
 COPY . .
 
 RUN mkdir -p /app/output
+RUN chmod +x src/launcher.sh
 
-CMD ["python", "src/main.py"]
+CMD ["bash", "src/launcher.sh"]
