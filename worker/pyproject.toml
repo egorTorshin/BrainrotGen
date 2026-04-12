@@ -18,6 +18,10 @@ dependencies = [
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+# App-style layout (scripts under src/); do not install ``worker`` as an importable package.
+package-mode = false
+
 [dependency-groups]
 dev = [
     "pytest (>=9.0.3,<10.0.0)",
