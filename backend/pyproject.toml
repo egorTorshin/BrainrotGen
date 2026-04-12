@@ -25,6 +25,7 @@ flake8 = "*"
 bandit = "*"
 radon = "*"
 httpx = "*"
+locust = "*"
 
 [tool.pytest.ini_options]
 minversion = "8.0"

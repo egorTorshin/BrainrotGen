@@ -38,6 +38,26 @@ docker compose up --build backend
 Uses `./data` and `./output` volumes; set `MEDIA_ROOT=/app/output` in compose for alignment with the worker.
 
 Open docs: `http://127.0.0.1:8000/docs`
+For a detailed guide with curl examples, see [API.md](../API.md).
+
+## Load Testing
+
+The project includes a Locust-based load testing suite to verify P95 latency requirements.
+
+### Running Load Tests
+
+1. Ensure the backend is running (locally or via Docker).
+2. Run the load test script from the repository root:
+   ```bash
+   ./scripts/run_load_tests.sh http://localhost:8000
+   ```
+
+The script will:
+- Simulate user registration, login, and job management flows.
+- Verify the **P95 < 200ms** threshold.
+- Automatically save a detailed HTML report (with graphs) in the `reports/load/` directory.
+
+---
 
 ## Result file download
 

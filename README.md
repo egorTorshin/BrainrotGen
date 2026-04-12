@@ -60,11 +60,69 @@ Generated videos go to **`./output`** (`MEDIA_ROOT` / `OUTPUT_DIR`). The worker 
 
 ## Architecture
 
-- **Backend** (FastAPI) — REST API for auth, job management, quota enforcement, video download.
-- **Frontend** (Streamlit) — UI for registration, login, video generation, and preview.
-- **Worker** — polls the DB for queued jobs, runs TTS (Piper), generates subtitles, composites video with ffmpeg.
+### System Flow
+```mermaid
+graph TD
+    User((User)) -->|Browser| FE[Streamlit Frontend]
+    FE -->|REST API + JWT| BE[FastAPI Backend]
+    BE -->|SQLAlchemy| DB[(SQLite Database)]
+    Worker[Video Worker] -->|Poll/Lock| DB
+    Worker -->|Write MP4| FS[Shared Output Folder]
+    BE -->|Serve MP4| FE
+    subgraph Video Pipeline
+        Worker --> TTS[Piper TTS]
+        Worker --> CV[FFmpeg Composite]
+    end
+```
+
+### Database Schema (ERD)
+```mermaid
+erDiagram
+    USER {
+        int id PK
+        string username
+        string hashed_password
+        datetime created_at
+    }
+    JOB {
+        string id PK
+        int user_id FK
+        string text
+        string status
+        float estimated_duration
+        datetime created_at
+        string result_path
+    }
+    USER ||--o{ JOB : "has"
+```
+
+## Load Testing
+
+Run the performance suite to verify P95 latency:
+```bash
+./scripts/run_load_tests.sh http://localhost:8000
+```
+- **Scenarios**: Registration, Login, Quota, Job management.
+- **Goal**: P95 < 200ms.
+- **Reporting**: Detailed HTML reports are saved to `reports/load/`.
 
 ## Documentation
 
-- Worker pipeline details: [README-WORKER.md](README-WORKER.md)
-- Backend API: [backend/README.md](backend/README.md)
+- **System Quality & Metrics**: [QUALITY_REPORT.md](QUALITY_REPORT.md)
+- **API Reference**: [API.md](API.md)
+- **Frontend Guide**: [frontend/README.md](frontend/README.md)
+- **Backend Guide**: [backend/README.md](backend/README.md)
+- **Worker/Pipeline Details**: [README-WORKER.md](README-WORKER.md)
+
+---
+
+## Quality Status
+
+| Category        | Standard / Limit       | Current Status |
+|-----------------|------------------------|----------------|
+| **Maintainability** | Radon MI >= 65         | ✅ Passed      |
+| **Reliability**     | Coverage >= 60%        | ✅ Passed      |
+| **Performance**     | P95 Latency < 200ms    | ✅ Passed*     |
+| **Security**        | Bandit (High/Med = 0)  | ✅ Passed      |
+
+*\*P95 goal maintained for all metadata endpoints. See [Quality Report](QUALITY_REPORT.md) for details.*

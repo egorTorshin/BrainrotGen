@@ -26,6 +26,14 @@ router = APIRouter()
     "/quota",
     response_model=QuotaResponse,
     summary="Get remaining daily quota",
+    description=(
+        "Retrieves the authenticated user's generation limits and currently consumed duration. "
+        "The daily limit is reset at 00:00 UTC."
+    ),
+    responses={
+        status.HTTP_200_OK: {"description": "Quota info retrieved successfully."},
+        status.HTTP_401_UNAUTHORIZED: {"description": "Missing or invalid authentication token."},
+    },
 )
 async def get_quota(
     user: User = Depends(get_current_user),
@@ -46,6 +54,23 @@ async def get_quota(
     response_model=CreateJobResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Submit a new video generation job",
+    description=(
+        "Submits text for processing and enqueues a generation job. "
+        "The system estimates the duration based on text length and checks if it fits within the user's daily quota. "
+        "If the quota is exceeded, a 429 status code is returned."
+    ),
+    responses={
+        status.HTTP_201_CREATED: {"description": "Job successfully enqueued."},
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required."},
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "description": "Daily quota exceeded — cannot process this job.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": {"code": "QUOTA_EXCEEDED", "message": "..."}}
+                }
+            },
+        },
+    },
 )
 async def create_job(
     body: CreateJobRequest,
@@ -93,6 +118,19 @@ async def create_job(
     "/{job_id}/result",
     response_class=FileResponse,
     summary="Download or stream the generated video file",
+    description=(
+        "Serves the final MP4 video file for a completed job. "
+        "The request will fail if the job is still in progress or failed."
+    ),
+    responses={
+        status.HTTP_200_OK: {
+            "description": "Video file served successfully.",
+            "content": {"video/mp4": {}},
+        },
+        status.HTTP_404_NOT_FOUND: {"description": "Job or result file not found."},
+        status.HTTP_403_FORBIDDEN: {"description": "Access denied (not your job)."},
+        status.HTTP_409_CONFLICT: {"description": "Job is not finished yet."},
+    },
 )
 async def download_job_result(
     job_id: str,
@@ -153,6 +191,15 @@ async def download_job_result(
     "/{job_id}",
     response_model=JobStatusResponse,
     summary="Get job status",
+    description=(
+        "Returns the current state of a generation job. "
+        "Allows polling for status updates (queued -> processing -> done/failed)."
+    ),
+    responses={
+        status.HTTP_200_OK: {"description": "Job status retrieved successfully."},
+        status.HTTP_404_NOT_FOUND: {"description": "Job not found."},
+        status.HTTP_403_FORBIDDEN: {"description": "Access denied (not your job)."},
+    },
 )
 async def get_job_status(
     job_id: str,
