@@ -7,40 +7,38 @@ from src.generate_video.subtitles import split_text, get_audio_duration, format_
 
 
 def test_split_text_default_max_words():
-    """Разбивает текст на chunks по умолчанию по 5 слов"""
+    """Splits text into chunks of 5 words by default"""
     text = "one two three four five six seven eight nine ten"
     result = split_text(text)
     assert result == ["one two three four five", "six seven eight nine ten"]
 
 
 def test_split_text_custom_max_words():
-    """Можно указать другое количество слов в chunk'е"""
+    """Custom max_words parameter changes chunk size"""
     text = "a b c d e f g"
     result = split_text(text, max_words=3)
     assert result == ["a b c", "d e f", "g"]
 
 
 def test_split_text_single_chunk():
-    """Короткий текст → один chunk"""
+    """Short text produces a single chunk"""
     text = "hello world"
     result = split_text(text)
     assert result == ["hello world"]
 
 
 def test_split_text_empty():
-    """Пустой текст → пустой список"""
+    """Empty text produces an empty list"""
     result = split_text("")
     assert result == []
 
 
 def test_format_time():
-    """Проверяем формат SRT timestamp (разные возможные варианты)"""
+    """Verify SRT timestamp formatting for various inputs"""
     result1 = format_time(0.0)
-    # Принимаем разные варианты форматирования
     assert result1 in ["00:00:00,000", "00:00:00.000", "00:00:00", "0:00:00"]
 
     result2 = format_time(1.5)
-    # Может быть с миллисекундами или без
     assert result2 in ["00:00:01,500", "00:00:01.500", "00:00:01"]
 
     result3 = format_time(61.123)
@@ -51,7 +49,7 @@ def test_format_time():
 
 
 def test_get_audio_duration(tmp_path):
-    """Должен вернуть длительность WAV файла в секундах"""
+    """Returns WAV file duration in seconds"""
     audio_path = tmp_path / "test.wav"
 
     import struct
@@ -68,7 +66,7 @@ def test_get_audio_duration(tmp_path):
 
 @patch("wave.open")
 def test_get_audio_duration_calculates_correctly(mock_wave_open):
-    """Мокаем wave.open для быстрых тестов"""
+    """Mocked wave.open for fast calculation tests"""
     mock_wav = MagicMock()
     mock_wav.getnframes.return_value = 88200
     mock_wav.getframerate.return_value = 44100
@@ -79,7 +77,7 @@ def test_get_audio_duration_calculates_correctly(mock_wave_open):
 
 
 def test_generate_srt_creates_file(tmp_path):
-    """Создает SRT файл с правильной структурой"""
+    """Creates an SRT file with valid structure"""
     text = "Hello world this is a test"
     audio_path = tmp_path / "audio.wav"
 
@@ -97,21 +95,14 @@ def test_generate_srt_creates_file(tmp_path):
     assert srt_path.exists()
     content = srt_path.read_text(encoding="utf-8")
 
-    # Проверяем структуру SRT
     assert "1" in content
     assert "-->" in content
     assert "Hello world" in content
 
 
 
-def test_split_text_empty():
-    """Пустой текст → пустой список"""
-    result = split_text("")
-    assert result == []
-
-
 def test_generate_srt_chunks_cover_full_duration(tmp_path):
-    """Все chunks вместе покрывают всю длительность аудио"""
+    """All chunks together cover the full audio duration"""
     text = "one two three four five six seven eight nine ten"
     audio_path = tmp_path / "audio.wav"
 
@@ -127,16 +118,14 @@ def test_generate_srt_chunks_cover_full_duration(tmp_path):
     content = srt_path.read_text()
     assert content.count("\n\n") >= 2
 
-    # Проверяем последний таймстамп (более гибко)
     lines = content.split("\n")
     timestamps = [line for line in lines if "-->" in line]
     last_timestamp = timestamps[-1]
     end_time = last_timestamp.split(" --> ")[1]
 
-    # Проверяем, что время около 10 секунд
-    # Извлекаем секунды из разных форматов
+    # Verify the end time is around 10 seconds
     if ":" in end_time:
         parts = end_time.replace(",", ":").replace(".", ":").split(":")
         if len(parts) >= 3:
             seconds = int(parts[2]) if parts[2].isdigit() else 0
-            assert seconds >= 9 or seconds <= 11  # около 10 секунд
+            assert seconds >= 9 or seconds <= 11

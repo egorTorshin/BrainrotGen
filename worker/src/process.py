@@ -13,7 +13,7 @@ def process_job(job):
         conn = _update_job_status(job_id, "done", result_path=str(result))
 
     except Exception as e:
-        _update_job_status(job_id, "failed", error=str(e))
+        conn = _update_job_status(job_id, "failed", error=str(e))
 
     finally:
         if conn:

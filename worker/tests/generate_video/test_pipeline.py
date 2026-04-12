@@ -6,19 +6,19 @@ from src.generate_video.pipeline import run_pipeline, output_dir
 
 
 def test_output_dir_from_env(monkeypatch):
-    """Читаем OUTPUT_DIR из окружения"""
+    """Reads OUTPUT_DIR from environment"""
     monkeypatch.setenv("OUTPUT_DIR", "/custom/output")
     assert output_dir() == Path("/custom/output")
 
 
 def test_output_dir_default(monkeypatch):
-    """Дефолтный OUTPUT_DIR"""
+    """Default OUTPUT_DIR when env var is unset"""
     monkeypatch.delenv("OUTPUT_DIR", raising=False)
     assert output_dir() == Path("/app/output")
 
 
 def test_run_pipeline_creates_output_dir(tmp_path):
-    """Если output директории нет → создает"""
+    """Creates output directory if it does not exist"""
     job_id = "test"
     output_path = tmp_path / "nonexistent" / "deep" / "dir"
 
@@ -39,7 +39,7 @@ def test_run_pipeline_creates_output_dir(tmp_path):
 
 
 def test_run_pipeline_passes_correct_srt_path(tmp_path):
-    """Проверяем, что generate_srt получает правильный путь"""
+    """generate_srt receives the correct SRT file path"""
     job_id = "srt_test"
     mock_output_dir = tmp_path / "output"
     mock_audio_path = mock_output_dir / f"{job_id}.wav"
@@ -57,17 +57,15 @@ def test_run_pipeline_passes_correct_srt_path(tmp_path):
                         video_path=Path("/dummy.mp4")
                     )
 
-                    # Проверяем, что generate_srt вызван с правильными аргументами
                     mock_srt.assert_called_once()
                     call_args = mock_srt.call_args
 
-                    # Один из аргументов должен быть путем к srt файлу
                     expected_srt = mock_output_dir / f"{job_id}.srt"
                     assert expected_srt in call_args[0] or expected_srt in call_args[1].values()
 
 
 def test_run_pipeline_pipeline_failure_propagates(tmp_path):
-    """Ошибка на любом этапе пайплайна пробрасывается наверх"""
+    """Error at any pipeline stage propagates to the caller"""
     job_id = "fail"
 
     with patch("src.generate_video.pipeline.output_dir", return_value=tmp_path):
@@ -82,7 +80,7 @@ def test_run_pipeline_pipeline_failure_propagates(tmp_path):
 
 
 def test_run_pipeline_handles_special_characters(tmp_path):
-    """Pipeline должен работать с текстом, содержащим спецсимволы"""
+    """Pipeline handles text with special characters"""
     job_id = "special"
     text = "Hello @#$%^&*() world! 🚀"
     voice = "male"
@@ -104,15 +102,13 @@ def test_run_pipeline_handles_special_characters(tmp_path):
                     )
 
                     assert result == mock_output_dir / f"{job_id}.mp4"
-                    # Проверяем, что текст передан правильно (независимо от порядка аргументов)
                     mock_tts.assert_called_once()
                     call_args = mock_tts.call_args
-                    # Проверяем, что text присутствует в аргументах
                     assert text in str(call_args)
 
 
 def test_run_pipeline_debug(tmp_path):
-    """Отладочный тест - выводит реальные вызовы"""
+    """Debug test that prints actual call arguments"""
     job_id = "debug"
     text = "Debug text"
     voice = "male"
@@ -121,7 +117,6 @@ def test_run_pipeline_debug(tmp_path):
 
     mock_output_dir = tmp_path / "output"
 
-    # Создаем реальные моки с записью вызовов
     with patch("src.generate_video.pipeline.output_dir", return_value=mock_output_dir):
         with patch("src.generate_video.pipeline.text_to_speech") as mock_tts:
             mock_tts.return_value = mock_output_dir / f"{job_id}.wav"
@@ -135,7 +130,6 @@ def test_run_pipeline_debug(tmp_path):
                         video_path=video_path
                     )
 
-                    # Выводим информацию для отладки
                     print(f"\n=== DEBUG INFO ===")
                     print(f"text_to_speech call args: {mock_tts.call_args}")
                     print(f"generate_srt call args: {mock_srt.call_args}")
@@ -143,7 +137,6 @@ def test_run_pipeline_debug(tmp_path):
                     print(f"Result: {result}")
                     print(f"==================\n")
 
-                    # Просто проверяем, что все вызвано хотя бы раз
                     assert mock_tts.called
                     assert mock_srt.called
                     assert mock_merge.called

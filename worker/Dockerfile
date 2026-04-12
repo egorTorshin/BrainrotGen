@@ -10,13 +10,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install poetry
 
-# Копируем файлы зависимостей ПОЭТОМУ (для кэширования)
+# Copy dependency files first for layer caching
 COPY pyproject.toml poetry.lock ./
 
-# Устанавливаем зависимости Python через Poetry
 RUN poetry install --no-ansi --no-interaction --no-root
 
-# Отключаем создание виртуального окружения (в Docker оно не нужно)
 ENV POETRY_VIRTUALENVS_CREATE=false
 
 WORKDIR /app

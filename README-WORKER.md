@@ -1,31 +1,32 @@
-# BrainrotGen Worker — архитектура и запуск
+# BrainrotGen Worker — Architecture and Usage
 
-## Общая идея
+## Overview
 
-Worker — это фоновый процесс, который:
+The Worker is a background process that:
 
-- забирает задачи из SQLite очереди (`jobs`)
-- генерирует аудио (TTS через Piper)
-- берёт видео-фон
-- накладывает субтитры и аудио через ffmpeg
-- сохраняет результат в `output/`
-- обновляет статус задачи в базе
+- Picks up tasks from the SQLite queue (`jobs` table)
+- Generates audio via TTS (Piper)
+- Selects a background video clip
+- Composites subtitles and audio using ffmpeg
+- Saves the result to `output/`
+- Updates the job status in the database
 
 ---
 
-# Качество кода (Quality Gates)
-|Проверка	| Результат | 	Статус |
-|-|-|------|
-|Unit Tests | 49/49 passed | 100% |
-|Coverage |	86%	|  ≥60% |
-|Black formatting |	9 files| OK   | 0 violations|
-|Flake8 style |	0 errors	| +    |
-|Bandit security	| 0 med/high	| +    |
-|Radon MI	| Все файлы A (≥67)	| ≥65  |
-|Radon CC |	B (7.5 average)| <10  |
+# Code Quality (Quality Gates)
 
+| Check | Result | Status |
+|-------|--------|--------|
+| Unit Tests | 49/49 passed | 100% |
+| Coverage | 86% | >= 60% |
+| Black formatting | 9 files OK | 0 violations |
+| Flake8 style | 0 errors | + |
+| Bandit security | 0 med/high | + |
+| Radon MI | All files A (>= 67) | >= 65 |
+| Radon CC | B (7.5 average) | < 10 |
 
-## Запуск всех проверок
+## Running All Checks
+
 ```bash
 poetry run black --check src/
 poetry run flake8 src/ --max-line-length=88
@@ -34,47 +35,40 @@ poetry run radon mi src/ -s
 poetry run radon cc src/ -a -nb --min B
 poetry run pytest tests/ -v --cov=src --cov-fail-under=60
 ```
+
 ---
 
-# Структура проекта
-```commandline
-BrainrotGen/
-├── data/
-│ ├── app.db
-│ ├── init_db.py
-│ ├── add_job.py
-│ ├── check.py
-│
-├── output/
-│
-├── ├── worker/
-│   ├── assets/                   # Видео-фоны
-│   │   └── minecraft.mp4
-│   │   └── subway.mp4
-│   │
-│   ├── generate_video/           # Модули генерации
-│   │   ├── pipeline.py           # Оркестрация пайплайна
+# Project Structure
+
+```
+worker/
+├── src/
+│   ├── generate_video/           # Video generation modules
+│   │   ├── pipeline.py           # Pipeline orchestration
 │   │   ├── tts.py                # Text-to-Speech (Piper/HTTP)
-│   │   ├── subtitles.py          # Генерация SRT
-│   │   └── video.py              # FFmpeg сборка
+│   │   ├── subtitles.py          # SRT generation
+│   │   ├── backgrounds.py        # Background video selection
+│   │   └── video.py              # FFmpeg composition
 │   │
-│   ├── db.py                     # Подключение к БД
-│   ├── job_queue.py              # Очередь задач (блокировки)
-│   ├── process.py                # Обработка одной задачи
-│   ├── main.py                   # Основной цикл воркера
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── poetry.lock
+│   ├── db.py                     # Database connection
+│   ├── job_queue.py              # Job queue with locking
+│   ├── process.py                # Single job processing
+│   └── main.py                   # Main worker loop
 │
-└── docker-compose.yml
+├── tests/
+├── assets/
+│   ├── minecraft/.gitkeep
+│   └── subway/.gitkeep
+├── Dockerfile
+├── pyproject.toml
+└── poetry.lock
 ```
 
-
 ---
 
-# База данных (SQLite: `jobs`)
+# Database (SQLite: `jobs`)
 
-## Таблица `jobs`
+## Table Schema
 
 ```sql
 CREATE TABLE jobs (
@@ -94,134 +88,106 @@ CREATE TABLE jobs (
 );
 ```
 
-## Поля таблицы
-```sql
-id
-```
-Уникальный идентификатор задачи.
-```sql
-text
-```
-Входной текст для генерации:
-- используется для TTS (Piper)
-- используется для генерации субтитров
-```sql
-status
-```
-Состояние задачи:
-- status	- значение
-- queued -	ожидает обработки
-- processing -	выполняется worker’ом
-- done	- успешно завершена
-- failed - ошибка
-- created_at
+## Column Descriptions
 
-Время создания задачи.
-```sql
-started_at
-```
-Когда worker начал обработку.
-```sql
-finished_at
-```
-Когда обработка завершилась.
-```sql
-result_path
-```
-Путь к итоговому видео:
-```bash
-/app/output/<uuid>.mp4
-```
-```bash
-error
-```
-Текст ошибки при падении pipeline.
+| Column | Description |
+|--------|-------------|
+| `id` | Unique job identifier (UUID) |
+| `text` | Input text for TTS and subtitle generation |
+| `status` | `queued` / `processing` / `done` / `failed` |
+| `created_at` | When the job was created |
+| `started_at` | When the worker began processing |
+| `finished_at` | When processing completed |
+| `result_path` | Path to the output video (`/app/output/<job_id>.mp4`) |
+| `error` | Error message if the pipeline failed |
 
-# Как запускается worker
-## Через Docker Compose
+---
+
+# How the Worker Runs
+
+## Via Docker Compose
+
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
-## Worker стартует через:
+
+## Entry Point
+
 ```python
-main.py
+# src/main.py
 ```
-## Основной цикл работы
+
+## Main Loop
+
 ```
 fetch job (queued)
-    ↓
+    |
 lock job (processing)
-    ↓
+    |
 run pipeline
-    ↓
+    |
 update DB
 ```
-# Pipeline генерации видео
-## Входные данные
 
-- jobs.text
-- worker/assets/night_parcour.mp4
+---
+
+# Video Generation Pipeline
+
+## Input
+
+- `jobs.text`
+- Background clip from `worker/assets/`
 
 ### 1. Text-to-Speech (Piper)
 
-Файл:
+File: `src/generate_video/tts.py`
 
-```generate_video/tts.py```
+- Text is passed to Piper TTS
+- Supports male/female voices
+- Falls back to any available model if the preferred one is missing
+- Output: `output/<job_id>.wav`
 
-Процесс:
+### 2. Subtitles
 
-- текст → Piper
-- поддержка male/female голосов
-- fallback при отсутствии модели
-- создаётся аудио файл: \
-```output/<uuid>.wav```
-### 2. Субтитры
+File: `src/generate_video/subtitles.py`
 
-Файл:
+- Text is split into chunks (5 words each)
+- Chunks are evenly distributed across the audio duration
+- Output: `output/<job_id>.srt`
 
-```generate_video/subtitles.py```
+### 3. Video Composition (FFmpeg)
 
-- текст разбивается на строки
-- равномерное распределение по длительности аудио
-- генерируется .srt \
-```output/<uuid>.srt```
-### 3. Сборка видео (FFmpeg)
+File: `src/generate_video/video.py`
 
-Файл:
+Inputs:
+- Background video (looped with `-stream_loop -1`)
+- Audio: `.wav`
+- Subtitles: `.srt` (burned in via `subtitles=` filter)
 
-```generate_video/video.py```
+Output: `output/<job_id>.mp4`
 
-Используется:
+## Output Files
 
-- фон: ```worker/assets/night_parcour.mp4```
-- аудио: .wav
-- субтитры: .srt
+All results are saved under `/app/output/`:
 
-Результат:
+- `<job_id>.wav` -- TTS audio
+- `<job_id>.srt` -- subtitles
+- `<job_id>.mp4` -- final video
 
-- финальный .mp4
+### Database Updates
 
-### Итоговый результат
-```output/<uuid>.mp4```
-## Output (результаты)
+#### On Success
 
-Все результаты сохраняются в:
-
-```/app/output/```\
-Файлы:
-- <uuid>.wav — аудио (TTS)
-- <uuid>.srt — субтитры
-- <uuid>.mp4 — итоговое видео
-### Обновление базы данных
-#### Успешное выполнение
 ```sql
 UPDATE jobs
 SET status = 'done',
-    result_path = '/app/output/<uuid>.mp4',
+    result_path = '/app/output/<job_id>.mp4',
     finished_at = CURRENT_TIMESTAMP
 WHERE id = ?
 ```
-#### Ошибка выполнения
+
+#### On Failure
+
 ```sql
 UPDATE jobs
 SET status = 'failed',
@@ -229,46 +195,42 @@ SET status = 'failed',
     finished_at = CURRENT_TIMESTAMP
 WHERE id = ?
 ```
-## Видео-источник (assets)
-
-Сейчас используется:
-
-```worker/assets/night_parcour.mp4```
-### Роль:
-- фон для всех видео
-- пока статический
-## Планируемое улучшение
-
-Добавить в БД:
-
-```video_path TEXT```
-
-И позволить каждому job использовать свой фон.
-
-# Итог архитектуры
-```
-SQLite (jobs)
-    ↓
-Worker loop
-    ↓
-fetch + lock job
-    ↓
-TTS (Piper)
-    ↓
-Subtitles (.srt)
-    ↓
-FFmpeg merge
-    ↓
-output/<uuid>.mp4
-    ↓
-DB update (done/failed)
-```
-# Ключевая идея
-
-Это lightweight job queue поверх SQLite:
-
-- SQLite = очередь задач
-- Worker = обработчик
-- FFmpeg = рендеринг видео
 
 ---
+
+## Background Assets
+
+Place `.mp4` gameplay clips in:
+
+- `worker/assets/minecraft/` -- for Minecraft background
+- `worker/assets/subway/` -- for Subway Surfers background
+
+A random clip is selected from the matching folder at generation time.
+
+---
+
+# Architecture Summary
+
+```
+SQLite (jobs)
+    |
+Worker loop
+    |
+fetch + lock job
+    |
+TTS (Piper)
+    |
+Subtitles (.srt)
+    |
+FFmpeg merge
+    |
+output/<job_id>.mp4
+    |
+DB update (done/failed)
+```
+
+This is a lightweight job queue built on top of SQLite:
+
+- **SQLite** = task queue
+- **Worker** = job processor
+- **FFmpeg** = video renderer

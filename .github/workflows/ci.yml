@@ -54,3 +54,51 @@ jobs:
       # ── Tests + Coverage ──
       - name: Pytest (unit tests + coverage >= 60%)
         run: poetry run pytest
+
+  worker:
+    name: Worker Quality Gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      # ── Formatting ──
+      - name: Black (formatting check)
+        run: poetry run black --check src/ tests/
+
+      # ── Linting ──
+      - name: Flake8 (style conformance)
+        run: poetry run flake8 src/
+
+      # ── Complexity ──
+      - name: Radon CC (cyclomatic complexity < 10)
+        run: poetry run radon cc -a -s --min C src/
+
+      - name: Radon MI (maintainability index >= 65)
+        run: |
+          poetry run radon mi -s src/ | tee mi_output.txt
+          if grep -qE '^\s*\S+ - [CDF]' mi_output.txt; then
+            echo "::error::Maintainability Index below threshold (grade C/D/F found)"
+            exit 1
+          fi
+
+      # ── Security ──
+      - name: Bandit (security scan)
+        run: poetry run bandit -r src/ -ll
+
+      # ── Tests + Coverage ──
+      - name: Pytest (unit tests + coverage >= 60%)
+        run: poetry run pytest

@@ -124,7 +124,7 @@ async def download_job_result(
             detail="Job not found",
         )
 
-    if job.user_id is not None and job.user_id != user.id:
+    if job.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",
@@ -179,7 +179,7 @@ async def get_job_status(
             detail="Job not found",
         )
 
-    if job.user_id is not None and job.user_id != user.id:
+    if job.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied",

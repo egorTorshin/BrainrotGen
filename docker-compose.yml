@@ -24,6 +24,7 @@ services:
 
   worker:
     build: worker
+    restart: on-failure
     volumes:
       - ./data:/app/data
       - ./output:/app/output

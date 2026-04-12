@@ -206,14 +206,14 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# BrainrotGen — локальная SQLite (API + worker, см. SQLITE_FILE / data/app.db)
+# SQLite database (shared by backend + worker)
 data/*.db
 data/*.db-wal
 data/*.db-shm
 
-# Worker — тяжёлые игровые клипы (локально; .gitkeep остаётся в репо)
+# Gameplay clips (large files, .gitkeep stays in repo)
 worker/assets/**/*.mp4
 
-# Сгенерированные артефакты (worker + отдача API), см. MEDIA_ROOT / OUTPUT_DIR
+# Generated artifacts (worker output + API media)
 output/
 
