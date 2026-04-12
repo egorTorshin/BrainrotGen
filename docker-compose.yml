@@ -2,9 +2,9 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "5173:5173"
+      - "8501:8501"
     environment:
-      VITE_API_URL: http://127.0.0.1:8000/api/v1
+      API_URL: http://backend:8000/api/v1
     depends_on:
       - backend
 
@@ -24,6 +24,7 @@ services:
 
   worker:
     build: worker
+    restart: on-failure
     volumes:
       - ./data:/app/data
       - ./output:/app/output

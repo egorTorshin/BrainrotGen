@@ -17,7 +17,7 @@ def main():
 
         if job:
             print(f"Processing job {job['id']}")
-            process_job(job)  # БЕЗ conn
+            process_job(job)
         else:
             time.sleep(1)
 

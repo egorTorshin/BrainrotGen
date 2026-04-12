@@ -4,9 +4,11 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir poetry
 
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
+
 COPY pyproject.toml poetry.lock ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --no-root
+RUN poetry install --no-interaction --no-ansi --no-root --without dev
 
 COPY src ./src
 

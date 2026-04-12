@@ -1,0 +1,14 @@
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: brainrotgen-quality
+        name: BrainrotGen quality (backend, worker, frontend)
+        language: python
+        additional_dependencies:
+          - poetry>=1.8.0
+        entry: python scripts/run_pre_commit_checks.py
+        pass_filenames: false
+        always_run: true

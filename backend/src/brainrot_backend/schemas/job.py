@@ -1,16 +1,23 @@
 """Job-related request/response schemas"""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+BackgroundKind = Literal["minecraft", "subway"]
+VoiceKind = Literal["male", "female"]
 
 
 class CreateJobRequest(BaseModel):
     """Payload for submitting a new video generation job"""
 
     text: str = Field(min_length=1, max_length=5000)
-    voice: str = Field(default="male")
-    background: str = Field(default="minecraft")
+    voice: VoiceKind = Field(default="male")
+    background: BackgroundKind = Field(
+        default="minecraft",
+        description="Gameplay asset set: minecraft (parkour) or subway (surfers).",
+    )
 
 
 class CreateJobResponse(BaseModel):

@@ -11,7 +11,7 @@ def resolve_media_file(stored_path: str, media_root: Path) -> Path:
 
     1. Absolute path, if it resolves inside *media_root* (Docker: ``/app/output/...``).
     2. Path relative to *media_root*.
-    3. **Basename only** under *media_root* (host dev when DB still has container paths).
+    3. **Basename only** under *media_root* (host dev: DB has container paths).
 
     Rejects paths that escape *media_root* (no ``../`` traversal past root).
     """

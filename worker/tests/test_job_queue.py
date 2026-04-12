@@ -7,11 +7,10 @@ from src.job_queue import fetch_and_lock_job
 
 @pytest.fixture
 def temp_db(tmp_path):
-    """Создаем временную БД для тестов"""
+    """Create a temporary SQLite DB for tests"""
     db_path = tmp_path / "test.db"
     conn = sqlite3.connect(str(db_path))
 
-    # Создаем схему как в реальной БД
     conn.execute("""
         CREATE TABLE jobs (
             id TEXT PRIMARY KEY,
@@ -35,37 +34,44 @@ def temp_db(tmp_path):
 
 @pytest.fixture
 def mock_conn(temp_db):
-    """Мок соединения с реальной БД"""
+    """Real SQLite connection backed by temp_db"""
     return temp_db
 
 
 def test_fetch_and_lock_job_returns_none_when_no_jobs(mock_conn):
-    """Нет задач в очереди → возвращаем None"""
+    """Empty queue returns None"""
     result = fetch_and_lock_job(mock_conn)
     assert result is None
 
 
 def test_fetch_and_lock_job_returns_oldest_queued_job(mock_conn):
-    """Должна вернуться самая старая задача со статусом 'queued'"""
-    # Вставляем три задачи
+    """Returns the oldest job with status 'queued'"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job1", "Text 1", "male", "minecraft", 10.0, "queued", "2024-01-01 10:00:00")
+        ("job1", "Text 1", "male", "minecraft", 10.0, "queued", "2024-01-01 10:00:00"),
     )
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job2", "Text 2", "female", "subway", 20.0, "queued", "2024-01-01 10:05:00")
+        ("job2", "Text 2", "female", "subway", 20.0, "queued", "2024-01-01 10:05:00"),
     )
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job3", "Text 3", "male", "minecraft", 15.0, "processing", "2024-01-01 09:00:00")
+        (
+            "job3",
+            "Text 3",
+            "male",
+            "minecraft",
+            15.0,
+            "processing",
+            "2024-01-01 09:00:00",
+        ),
     )
     mock_conn.commit()
 
     job = fetch_and_lock_job(mock_conn)
 
     assert job is not None
-    assert job["id"] == "job1"  # Самая старая queued задача
+    assert job["id"] == "job1"
     assert job["text"] == "Text 1"
     assert job["voice"] == "male"
     assert job["background"] == "minecraft"
@@ -73,10 +79,10 @@ def test_fetch_and_lock_job_returns_oldest_queued_job(mock_conn):
 
 
 def test_fetch_and_lock_job_updates_status_to_processing(mock_conn):
-    """После взятия задачи статус должен стать 'processing'"""
+    """Fetched job is marked as 'processing'"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-        ("job1", "Test text", "queued")
+        ("job1", "Test text", "queued"),
     )
     mock_conn.commit()
 
@@ -91,25 +97,18 @@ def test_fetch_and_lock_job_updates_status_to_processing(mock_conn):
 
 
 def test_fetch_and_lock_job_uses_transaction(mock_conn):
-    """Проверяем, что используется BEGIN IMMEDIATE для блокировки"""
-    # Просто проверяем, что функция работает без ошибок
-    # BEGIN IMMEDIATE используется внутри, но мы не можем это проверить без моков
-    # Этот тест проверяет, что функция корректно работает с транзакциями
-
-    # Вставляем задачу
+    """Verifies transactional behavior (BEGIN IMMEDIATE)"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-        ("test_transaction", "Test", "queued")
+        ("test_transaction", "Test", "queued"),
     )
     mock_conn.commit()
 
-    # Вызываем функцию - она должна успешно выполниться
     job = fetch_and_lock_job(mock_conn)
 
     assert job is not None
     assert job["id"] == "test_transaction"
 
-    # Проверяем, что статус изменился на processing
     cursor = mock_conn.cursor()
     cursor.execute("SELECT status FROM jobs WHERE id = ?", ("test_transaction",))
     status = cursor.fetchone()[0]
@@ -117,7 +116,7 @@ def test_fetch_and_lock_job_uses_transaction(mock_conn):
 
 
 def test_fetch_and_lock_job_rollback_on_error():
-    """При ошибке должен быть rollback"""
+    """Error during fetch triggers a rollback"""
     import tempfile
     import os
 
@@ -126,7 +125,6 @@ def test_fetch_and_lock_job_rollback_on_error():
     test_conn = sqlite3.connect(db_path)
 
     try:
-        # Создаем таблицу
         test_conn.execute("""
             CREATE TABLE jobs (
                 id TEXT PRIMARY KEY,
@@ -144,26 +142,21 @@ def test_fetch_and_lock_job_rollback_on_error():
         """)
         test_conn.commit()
 
-        # Вставляем задачу
         test_conn.execute(
             "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-            ("job1", "Test", "queued")
+            ("job1", "Test", "queued"),
         )
         test_conn.commit()
 
-        # Проверяем начальный статус
         cursor = test_conn.cursor()
         cursor.execute("SELECT status FROM jobs WHERE id = ?", ("job1",))
         assert cursor.fetchone()[0] == "queued"
 
-        # Вызываем функцию - она должна успешно выполниться
-        # Если бы была ошибка, статус остался бы queued
         job = fetch_and_lock_job(test_conn)
 
         assert job is not None
         assert job["id"] == "job1"
 
-        # Статус должен стать processing
         cursor.execute("SELECT status FROM jobs WHERE id = ?", ("job1",))
         status = cursor.fetchone()[0]
         assert status == "processing"
@@ -174,10 +167,9 @@ def test_fetch_and_lock_job_rollback_on_error():
 
 
 def test_fetch_and_lock_job_default_values(mock_conn):
-    """Проверяем default значения для voice и background"""
+    """NULL voice/background/duration get sensible defaults"""
     mock_conn.execute(
-        "INSERT INTO jobs (id, text) VALUES (?, ?)",
-        ("job1", "Test text")
+        "INSERT INTO jobs (id, text) VALUES (?, ?)", ("job1", "Test text")
     )
     mock_conn.commit()
 
@@ -189,10 +181,10 @@ def test_fetch_and_lock_job_default_values(mock_conn):
 
 
 def test_fetch_and_lock_job_handles_null_estimated_duration(mock_conn):
-    """estimated_duration может быть NULL → конвертируем в 0.0"""
+    """NULL estimated_duration is converted to 0.0"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, estimated_duration) VALUES (?, ?, ?)",
-        ("job1", "Test", None)
+        ("job1", "Test", None),
     )
     mock_conn.commit()
 

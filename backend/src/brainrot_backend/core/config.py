@@ -1,5 +1,6 @@
 """Application settings and configuration helpers."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -41,7 +42,17 @@ class Settings(BaseSettings):
         """Return an explicit DB URL or derive one from sqlite_file."""
         if self.database_url:
             return self.database_url
-        return f"sqlite+aiosqlite:///./{self.sqlite_file}"
+        path = Path(self.sqlite_file).expanduser()
+        if not path.is_absolute():
+            # Relative to cwd (e.g. data/app.db)
+            return f"sqlite+aiosqlite:///./{path.as_posix()}"
+        path = path.resolve()
+        # Absolute paths: ``///./abs`` breaks SQLite (see pytest temp dirs on Linux).
+        if os.name == "nt":
+            # Windows: sqlite:///C:/path/to/db
+            return f"sqlite+aiosqlite:///{path.as_posix()}"
+        # Unix: four slashes after the scheme — path is /...
+        return f"sqlite+aiosqlite:////{path.as_posix().lstrip('/')}"
 
     @property
     def is_development(self) -> bool:

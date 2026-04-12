@@ -52,4 +52,4 @@ def test_login_unknown_user(client: TestClient) -> None:
 
 def test_protected_route_without_token(client: TestClient) -> None:
     response = client.get("/api/v1/jobs/quota")
-    assert response.status_code == 403
+    assert response.status_code == 401

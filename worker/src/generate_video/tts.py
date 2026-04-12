@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
+import wave
 from pathlib import Path
 
 import requests
@@ -15,6 +17,19 @@ VOICE_MODELS = {
     "female": BASE_DIR / "piper_voice/en_GB-alba-medium.onnx",
     "male": BASE_DIR / "piper_voice/en_GB-northern_english_male-medium.onnx",
 }
+
+
+def wav_duration_seconds(wav_path: Path) -> float | None:
+    """Return duration in seconds for a PCM WAV file, or None if unreadable."""
+    try:
+        with contextlib.closing(wave.open(str(wav_path), "rb")) as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            if rate <= 0:
+                return None
+            return frames / float(rate)
+    except (OSError, wave.Error):
+        return None
 
 
 def _piper_tts(text: str, model_path: Path, output_file: Path) -> Path:
@@ -31,6 +46,26 @@ def _piper_tts(text: str, model_path: Path, output_file: Path) -> Path:
         check=True,
     )
     return output_file
+
+
+def _resolve_model_path(voice: str) -> Path:
+    key = voice.strip().lower() if voice else "male"
+    if key not in VOICE_MODELS:
+        key = "male"
+    model_path = VOICE_MODELS[key]
+    if not model_path.is_file():
+        for fallback in VOICE_MODELS.values():
+            if fallback.is_file():
+                return fallback
+        raise FileNotFoundError(
+            f"No Piper model found under {BASE_DIR / 'piper_voice'}",
+        )
+    return model_path
+
+
+def _piper_synthesize(text: str, voice: str, output_file: Path) -> Path:
+    model_path = _resolve_model_path(voice)
+    return _piper_tts(text, model_path, output_file)
 
 
 def _http_tts(text: str, output_file: Path) -> Path:
@@ -71,22 +106,13 @@ def text_to_speech(text: str, voice: str, job_id: str, out_dir: Path) -> Path:
     if backend == "http":
         try:
             return _http_tts(text, output_file)
-        except (requests.RequestException, OSError, RuntimeError) as e:
-            raise RuntimeError(f"HTTP TTS failed: {e}") from e
+        except (requests.RequestException, OSError, RuntimeError) as http_err:
+            try:
+                return _piper_synthesize(text, voice, output_file)
+            except Exception as piper_err:
+                raise RuntimeError(
+                    "HTTP TTS failed and Piper fallback failed: "
+                    f"{http_err!s}; {piper_err!s}",
+                ) from piper_err
 
-    key = voice.strip().lower() if voice else "male"
-    if key not in VOICE_MODELS:
-        key = "male"
-    model_path = VOICE_MODELS[key]
-    if not model_path.is_file():
-        # Fallback: any available model (e.g. partial Docker setup)
-        for fallback in VOICE_MODELS.values():
-            if fallback.is_file():
-                model_path = fallback
-                break
-        else:
-            raise FileNotFoundError(
-                f"No Piper model found under {BASE_DIR / 'piper_voice'}"
-            )
-
-    return _piper_tts(text, model_path, output_file)
+    return _piper_synthesize(text, voice, output_file)

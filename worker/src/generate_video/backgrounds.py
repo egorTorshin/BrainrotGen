@@ -6,11 +6,29 @@ import os
 import random
 from pathlib import Path
 
-# Maps API ``background`` field to subdirectory under ASSETS_ROOT
+# Maps normalized background key to subdirectory under ASSETS_ROOT
 _BACKGROUND_DIRS = {
     "minecraft": "minecraft",
     "subway": "subway",
 }
+
+
+def normalize_background_key(background: str | None) -> str:
+    """
+    Map UI/API labels and legacy strings to ``minecraft`` or ``subway``.
+
+    API uses ``minecraft`` | ``subway``; older rows may contain phrases.
+    """
+    if not background:
+        return "minecraft"
+    s = background.strip().lower()
+    if s in _BACKGROUND_DIRS:
+        return s
+    if "subway" in s:
+        return "subway"
+    if "minecraft" in s:
+        return "minecraft"
+    return "minecraft"
 
 
 def pick_background_video(assets_root: Path, background: str) -> Path:
@@ -20,8 +38,8 @@ def pick_background_video(assets_root: Path, background: str) -> Path:
     Raises:
         FileNotFoundError: directory missing or contains no ``.mp4`` files.
     """
-    key = background.strip().lower() if background else "minecraft"
-    sub = _BACKGROUND_DIRS.get(key, "minecraft")
+    key = normalize_background_key(background)
+    sub = _BACKGROUND_DIRS[key]
     folder = assets_root / sub
     if not folder.is_dir():
         raise FileNotFoundError(f"Background folder not found: {folder}")
