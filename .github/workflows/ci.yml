@@ -37,7 +37,7 @@ jobs:
 
       # ── Complexity ──
       - name: Radon CC (strict, cyclomatic complexity < 10)
-        run: python ../scripts/check_radon_cc_threshold.py src/
+        run: poetry run python ../scripts/check_radon_cc_threshold.py src/
 
       - name: Radon MI (maintainability index >= 65)
         run: |
@@ -82,7 +82,7 @@ jobs:
         run: poetry run flake8 app.py api.py duration.py state.py
 
       - name: Radon CC (strict, cyclomatic complexity < 10)
-        run: python ../scripts/check_radon_cc_threshold.py app.py api.py duration.py state.py
+        run: poetry run python ../scripts/check_radon_cc_threshold.py app.py api.py duration.py state.py
 
       - name: Radon MI (maintainability index >= 65)
         run: |
@@ -125,7 +125,7 @@ jobs:
 
       # ── Complexity ──
       - name: Radon CC (strict, cyclomatic complexity < 10)
-        run: python ../scripts/check_radon_cc_threshold.py src/
+        run: poetry run python ../scripts/check_radon_cc_threshold.py src/
 
       - name: Radon MI (maintainability index >= 65)
         run: |
