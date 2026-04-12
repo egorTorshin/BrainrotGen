@@ -48,15 +48,23 @@ def test_fetch_and_lock_job_returns_oldest_queued_job(mock_conn):
     """Returns the oldest job with status 'queued'"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job1", "Text 1", "male", "minecraft", 10.0, "queued", "2024-01-01 10:00:00")
+        ("job1", "Text 1", "male", "minecraft", 10.0, "queued", "2024-01-01 10:00:00"),
     )
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job2", "Text 2", "female", "subway", 20.0, "queued", "2024-01-01 10:05:00")
+        ("job2", "Text 2", "female", "subway", 20.0, "queued", "2024-01-01 10:05:00"),
     )
     mock_conn.execute(
         "INSERT INTO jobs (id, text, voice, background, estimated_duration, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("job3", "Text 3", "male", "minecraft", 15.0, "processing", "2024-01-01 09:00:00")
+        (
+            "job3",
+            "Text 3",
+            "male",
+            "minecraft",
+            15.0,
+            "processing",
+            "2024-01-01 09:00:00",
+        ),
     )
     mock_conn.commit()
 
@@ -74,7 +82,7 @@ def test_fetch_and_lock_job_updates_status_to_processing(mock_conn):
     """Fetched job is marked as 'processing'"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-        ("job1", "Test text", "queued")
+        ("job1", "Test text", "queued"),
     )
     mock_conn.commit()
 
@@ -92,7 +100,7 @@ def test_fetch_and_lock_job_uses_transaction(mock_conn):
     """Verifies transactional behavior (BEGIN IMMEDIATE)"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-        ("test_transaction", "Test", "queued")
+        ("test_transaction", "Test", "queued"),
     )
     mock_conn.commit()
 
@@ -136,7 +144,7 @@ def test_fetch_and_lock_job_rollback_on_error():
 
         test_conn.execute(
             "INSERT INTO jobs (id, text, status) VALUES (?, ?, ?)",
-            ("job1", "Test", "queued")
+            ("job1", "Test", "queued"),
         )
         test_conn.commit()
 
@@ -161,8 +169,7 @@ def test_fetch_and_lock_job_rollback_on_error():
 def test_fetch_and_lock_job_default_values(mock_conn):
     """NULL voice/background/duration get sensible defaults"""
     mock_conn.execute(
-        "INSERT INTO jobs (id, text) VALUES (?, ?)",
-        ("job1", "Test text")
+        "INSERT INTO jobs (id, text) VALUES (?, ?)", ("job1", "Test text")
     )
     mock_conn.commit()
 
@@ -177,7 +184,7 @@ def test_fetch_and_lock_job_handles_null_estimated_duration(mock_conn):
     """NULL estimated_duration is converted to 0.0"""
     mock_conn.execute(
         "INSERT INTO jobs (id, text, estimated_duration) VALUES (?, ?, ?)",
-        ("job1", "Test", None)
+        ("job1", "Test", None),
     )
     mock_conn.commit()
 

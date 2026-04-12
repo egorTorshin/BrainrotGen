@@ -79,6 +79,7 @@ CREATE TABLE jobs (
     background VARCHAR(32) NOT NULL,
     status VARCHAR(16) NOT NULL,
     estimated_duration FLOAT,
+    actual_duration_seconds FLOAT,
     created_at DATETIME NOT NULL,
     started_at DATETIME,
     finished_at DATETIME,
@@ -99,6 +100,7 @@ CREATE TABLE jobs (
 | `started_at` | When the worker began processing |
 | `finished_at` | When processing completed |
 | `result_path` | Path to the output video (`/app/output/<job_id>.mp4`) |
+| `actual_duration_seconds` | WAV length when `done` (quota); set by worker |
 | `error` | Error message if the pipeline failed |
 
 ---
@@ -110,6 +112,10 @@ CREATE TABLE jobs (
 ```bash
 docker compose up --build
 ```
+
+**Shared SQLite with the API:** both services mount `./data` from the repo. The backend uses `SQLITE_FILE=data/app.db` (path inside the container under `/app/data/app.db`); the worker opens `SQLITE_PATH=/app/data/app.db`. That is the same host file, so queued jobs created by FastAPI are visible to the worker immediately.
+
+**Shared output:** `./output` is mounted for both; the worker writes `<job_id>.mp4` here and the backend resolves download paths against `MEDIA_ROOT`.
 
 ## Entry Point
 
@@ -128,6 +134,20 @@ run pipeline
     |
 update DB
 ```
+
+## Pipeline retries (transient failures)
+
+`process.py` re-runs the full generation step a limited number of times when the error looks transient:
+
+- `requests.RequestException` (e.g. HTTP TTS timeouts or connection errors)
+- `subprocess.CalledProcessError` (e.g. occasional `ffmpeg` / Piper exit codes)
+
+| Environment variable | Default | Meaning |
+|---------------------|---------|---------|
+| `WORKER_PIPELINE_MAX_ATTEMPTS` | `3` | At least `1`. Attempts before marking the job `failed`. |
+| `WORKER_PIPELINE_RETRY_DELAY_SEC` | `1.0` | Base delay in seconds; backoff is `base × 2**attempt`. |
+
+Non-transient errors (e.g. missing assets, bad input) are not retried.
 
 ---
 

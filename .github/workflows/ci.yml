@@ -36,8 +36,8 @@ jobs:
         run: poetry run flake8 src/
 
       # ── Complexity ──
-      - name: Radon CC (cyclomatic complexity < 10)
-        run: poetry run radon cc -a -s --min C src/
+      - name: Radon CC (strict, cyclomatic complexity < 10)
+        run: python ../scripts/check_radon_cc_threshold.py src/
 
       - name: Radon MI (maintainability index >= 65)
         run: |
@@ -54,6 +54,46 @@ jobs:
       # ── Tests + Coverage ──
       - name: Pytest (unit tests + coverage >= 60%)
         run: poetry run pytest
+
+  frontend:
+    name: Frontend Quality Gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Black (formatting check)
+        run: poetry run black --check app.py api.py duration.py state.py
+
+      - name: Flake8 (style conformance)
+        run: poetry run flake8 app.py api.py duration.py state.py
+
+      - name: Radon CC (strict, cyclomatic complexity < 10)
+        run: python ../scripts/check_radon_cc_threshold.py app.py api.py duration.py state.py
+
+      - name: Radon MI (maintainability index >= 65)
+        run: |
+          poetry run radon mi -s app.py api.py duration.py state.py | tee mi_output.txt
+          if grep -qE '^\s*\S+ - [CDF]' mi_output.txt; then
+            echo "::error::Maintainability Index below threshold (grade C/D/F found)"
+            exit 1
+          fi
+
+      - name: Bandit (security scan)
+        run: poetry run bandit app.py api.py duration.py state.py -ll
 
   worker:
     name: Worker Quality Gates
@@ -84,8 +124,8 @@ jobs:
         run: poetry run flake8 src/
 
       # ── Complexity ──
-      - name: Radon CC (cyclomatic complexity < 10)
-        run: poetry run radon cc -a -s --min C src/
+      - name: Radon CC (strict, cyclomatic complexity < 10)
+        run: python ../scripts/check_radon_cc_threshold.py src/
 
       - name: Radon MI (maintainability index >= 65)
         run: |

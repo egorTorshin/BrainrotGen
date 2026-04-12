@@ -3,7 +3,11 @@ import pytest
 import os
 from pathlib import Path
 from unittest.mock import patch
-from src.generate_video.backgrounds import pick_background_video, assets_root_from_env
+from src.generate_video.backgrounds import (
+    assets_root_from_env,
+    normalize_background_key,
+    pick_background_video,
+)
 
 
 def test_pick_background_video_returns_random_mp4(tmp_path):
@@ -88,6 +92,27 @@ def test_pick_background_video_handles_subway(tmp_path):
 
     result = pick_background_video(assets_root, "subway")
     assert result == video
+
+
+def test_pick_background_video_subway_surfers_label(tmp_path):
+    """Streamlit-style label maps to subway folder."""
+    assets_root = tmp_path / "assets"
+    subway_dir = assets_root / "subway"
+    subway_dir.mkdir(parents=True)
+    video = subway_dir / "s.mp4"
+    video.touch()
+
+    assert normalize_background_key("Subway Surfers") == "subway"
+    assert pick_background_video(assets_root, "subway surfers") == video
+
+
+def test_normalize_background_key_minecraft_parkour():
+    assert normalize_background_key("minecraft parkour") == "minecraft"
+
+
+def test_normalize_background_key_api_values():
+    assert normalize_background_key("minecraft") == "minecraft"
+    assert normalize_background_key("subway") == "subway"
 
 
 def test_assets_root_from_env(monkeypatch):

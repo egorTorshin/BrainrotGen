@@ -137,7 +137,9 @@ celerybeat.pid
 # Environments
 .env
 .envrc
-.venv
+# Root and nested virtualenvs (Poetry/PyCharm often use backend/.venv, worker/.venv, …)
+.venv/
+**/.venv/
 env/
 venv/
 ENV/

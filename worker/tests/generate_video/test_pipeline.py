@@ -31,7 +31,7 @@ def test_run_pipeline_creates_output_dir(tmp_path):
                         job_id=job_id,
                         text="Test",
                         voice="male",
-                        video_path=Path("/dummy.mp4")
+                        video_path=Path("/dummy.mp4"),
                     )
 
                     assert output_path.exists()
@@ -54,14 +54,17 @@ def test_run_pipeline_passes_correct_srt_path(tmp_path):
                         job_id=job_id,
                         text="Test",
                         voice="male",
-                        video_path=Path("/dummy.mp4")
+                        video_path=Path("/dummy.mp4"),
                     )
 
                     mock_srt.assert_called_once()
                     call_args = mock_srt.call_args
 
                     expected_srt = mock_output_dir / f"{job_id}.srt"
-                    assert expected_srt in call_args[0] or expected_srt in call_args[1].values()
+                    assert (
+                        expected_srt in call_args[0]
+                        or expected_srt in call_args[1].values()
+                    )
 
 
 def test_run_pipeline_pipeline_failure_propagates(tmp_path):
@@ -69,13 +72,16 @@ def test_run_pipeline_pipeline_failure_propagates(tmp_path):
     job_id = "fail"
 
     with patch("src.generate_video.pipeline.output_dir", return_value=tmp_path):
-        with patch("src.generate_video.pipeline.text_to_speech", side_effect=RuntimeError("TTS failed")):
+        with patch(
+            "src.generate_video.pipeline.text_to_speech",
+            side_effect=RuntimeError("TTS failed"),
+        ):
             with pytest.raises(RuntimeError, match="TTS failed"):
                 run_pipeline(
                     job_id=job_id,
                     text="Test",
                     voice="male",
-                    video_path=Path("/dummy.mp4")
+                    video_path=Path("/dummy.mp4"),
                 )
 
 
@@ -95,10 +101,7 @@ def test_run_pipeline_handles_special_characters(tmp_path):
             with patch("src.generate_video.pipeline.generate_srt"):
                 with patch("src.generate_video.pipeline.merge_video_audio_subs"):
                     result = run_pipeline(
-                        job_id=job_id,
-                        text=text,
-                        voice=voice,
-                        video_path=video_path
+                        job_id=job_id, text=text, voice=voice, video_path=video_path
                     )
 
                     assert result == mock_output_dir / f"{job_id}.mp4"
@@ -122,12 +125,11 @@ def test_run_pipeline_debug(tmp_path):
             mock_tts.return_value = mock_output_dir / f"{job_id}.wav"
 
             with patch("src.generate_video.pipeline.generate_srt") as mock_srt:
-                with patch("src.generate_video.pipeline.merge_video_audio_subs") as mock_merge:
+                with patch(
+                    "src.generate_video.pipeline.merge_video_audio_subs"
+                ) as mock_merge:
                     result = run_pipeline(
-                        job_id=job_id,
-                        text=text,
-                        voice=voice,
-                        video_path=video_path
+                        job_id=job_id, text=text, voice=voice, video_path=video_path
                     )
 
                     print(f"\n=== DEBUG INFO ===")

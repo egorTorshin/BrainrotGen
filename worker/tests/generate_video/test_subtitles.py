@@ -3,7 +3,12 @@ import pytest
 import wave
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from src.generate_video.subtitles import split_text, get_audio_duration, format_time, generate_srt
+from src.generate_video.subtitles import (
+    split_text,
+    get_audio_duration,
+    format_time,
+    generate_srt,
+)
 
 
 def test_split_text_default_max_words():
@@ -53,11 +58,12 @@ def test_get_audio_duration(tmp_path):
     audio_path = tmp_path / "test.wav"
 
     import struct
-    with wave.open(str(audio_path), 'wb') as wav:
+
+    with wave.open(str(audio_path), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(44100)
-        frames = b'\x00\x00' * 44100
+        frames = b"\x00\x00" * 44100
         wav.writeframes(frames)
 
     duration = get_audio_duration(audio_path)
@@ -82,11 +88,12 @@ def test_generate_srt_creates_file(tmp_path):
     audio_path = tmp_path / "audio.wav"
 
     import struct
-    with wave.open(str(audio_path), 'wb') as wav:
+
+    with wave.open(str(audio_path), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(44100)
-        frames = b'\x00\x00' * 88200
+        frames = b"\x00\x00" * 88200
         wav.writeframes(frames)
 
     srt_path = tmp_path / "output.srt"
@@ -100,17 +107,16 @@ def test_generate_srt_creates_file(tmp_path):
     assert "Hello world" in content
 
 
-
 def test_generate_srt_chunks_cover_full_duration(tmp_path):
     """All chunks together cover the full audio duration"""
     text = "one two three four five six seven eight nine ten"
     audio_path = tmp_path / "audio.wav"
 
-    with wave.open(str(audio_path), 'wb') as wav:
+    with wave.open(str(audio_path), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
         wav.setframerate(44100)
-        wav.writeframes(b'\x00\x00' * 44100 * 10)
+        wav.writeframes(b"\x00\x00" * 44100 * 10)
 
     srt_path = tmp_path / "full.srt"
     generate_srt(text, audio_path, srt_path)

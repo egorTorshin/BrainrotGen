@@ -35,7 +35,9 @@ def test_merge_video_audio_subs_success(tmp_path):
 
         vf_index = args.index("-vf")
         vf_value = args[vf_index + 1]
-        assert f"subtitles={srt_path.as_posix()}" in vf_value or str(srt_path) in vf_value
+        assert (
+            f"subtitles={srt_path.as_posix()}" in vf_value or str(srt_path) in vf_value
+        )
 
         assert "-c:v" in args
         assert "libx264" in args
@@ -56,7 +58,9 @@ def test_merge_video_audio_subs_ffmpeg_failure(tmp_path):
     audio_path.touch()
     srt_path.touch()
 
-    with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "ffmpeg")):
+    with patch(
+        "subprocess.run", side_effect=subprocess.CalledProcessError(1, "ffmpeg")
+    ):
         with pytest.raises(subprocess.CalledProcessError):
             merge_video_audio_subs(video_path, audio_path, srt_path, output_path)
 
@@ -79,8 +83,12 @@ def test_merge_video_audio_subs_handles_spaces_in_paths(tmp_path):
 
         call_args = mock_run.call_args[0][0]
 
-        assert str(video_path) in " ".join(call_args) or video_path.name in " ".join(call_args)
-        assert str(audio_path) in " ".join(call_args) or audio_path.name in " ".join(call_args)
+        assert str(video_path) in " ".join(call_args) or video_path.name in " ".join(
+            call_args
+        )
+        assert str(audio_path) in " ".join(call_args) or audio_path.name in " ".join(
+            call_args
+        )
 
         args_string = " ".join(call_args)
         assert str(srt_path) in args_string or srt_path.name in args_string
@@ -130,12 +138,24 @@ def test_merge_video_audio_subs_check_full_command(tmp_path):
         command = mock_run.call_args[0][0]
 
         expected_parts = [
-            "ffmpeg", "-y", "-stream_loop", "-1",
-            "-i", str(video_path),
-            "-i", str(audio_path),
-            "-map", "0:v", "-map", "1:a",
-            "-c:v", "libx264", "-c:a", "aac",
-            "-shortest", str(output_path)
+            "ffmpeg",
+            "-y",
+            "-stream_loop",
+            "-1",
+            "-i",
+            str(video_path),
+            "-i",
+            str(audio_path),
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            "-c:v",
+            "libx264",
+            "-c:a",
+            "aac",
+            "-shortest",
+            str(output_path),
         ]
 
         for part in expected_parts:

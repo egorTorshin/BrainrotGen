@@ -35,6 +35,7 @@ class Job(Base):
     background: Mapped[str] = mapped_column(String(32), default="minecraft")
     status: Mapped[str] = mapped_column(String(16), default="queued")
     estimated_duration: Mapped[float | None] = mapped_column(Float, nullable=True)
+    actual_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=lambda: datetime.now(timezone.utc),

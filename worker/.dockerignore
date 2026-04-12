@@ -1,0 +1,11 @@
+.git
+.gitignore
+.pytest_cache
+__pycache__
+*.py[cod]
+.coverage
+htmlcov
+tests
+*.md
+.env
+.env.*

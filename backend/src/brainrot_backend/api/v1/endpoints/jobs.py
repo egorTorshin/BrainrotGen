@@ -1,10 +1,8 @@
 """Job creation, status polling, and quota endpoints"""
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from brainrot_backend.api.deps import get_current_user
@@ -19,24 +17,9 @@ from brainrot_backend.schemas.job import (
     JobStatusResponse,
     QuotaResponse,
 )
+from brainrot_backend.services.quota import sum_charged_seconds_today
 
 router = APIRouter()
-
-
-async def _used_today(user_id: int, session: AsyncSession) -> float:
-    """Sum estimated_duration for all jobs the user created today"""
-    today_start = datetime.now(timezone.utc).replace(
-        hour=0,
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
-    result = await session.execute(
-        select(func.coalesce(func.sum(Job.estimated_duration), 0.0))
-        .where(Job.user_id == user_id)
-        .where(Job.created_at >= today_start),
-    )
-    return float(result.scalar_one())
 
 
 @router.get(
@@ -50,7 +33,7 @@ async def get_quota(
 ) -> QuotaResponse:
     """Return how many seconds of generation the user has left today"""
     settings = get_settings()
-    used = await _used_today(user.id, session)
+    used = await sum_charged_seconds_today(session, user.id)
     return QuotaResponse(
         daily_limit_seconds=settings.daily_quota_seconds,
         used_seconds=round(used, 1),
@@ -72,17 +55,20 @@ async def create_job(
     """Enqueue a generation job after checking the daily quota"""
     settings = get_settings()
     duration = estimate_duration(body.text)
-    used = await _used_today(user.id, session)
+    used = await sum_charged_seconds_today(session, user.id)
 
     if used + duration > settings.daily_quota_seconds:
         remaining = max(settings.daily_quota_seconds - used, 0)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=(
-                f"Daily quota exceeded — "
-                f"{remaining:.0f}s remaining, "
-                f"but this job needs ~{duration:.0f}s"
-            ),
+            detail={
+                "code": "QUOTA_EXCEEDED",
+                "message": (
+                    f"Daily quota exceeded — "
+                    f"{remaining:.0f}s remaining, "
+                    f"but this job needs ~{duration:.0f}s"
+                ),
+            },
         )
 
     job = Job(
@@ -110,6 +96,10 @@ async def create_job(
 )
 async def download_job_result(
     job_id: str,
+    attachment: bool = Query(
+        False,
+        description="If true, send Content-Disposition attachment for file download.",
+    ),
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> FileResponse:
@@ -155,7 +145,7 @@ async def download_job_result(
         path=str(path),
         media_type="video/mp4",
         filename=download_name,
-        content_disposition_type="inline",
+        content_disposition_type="attachment" if attachment else "inline",
     )
 
 

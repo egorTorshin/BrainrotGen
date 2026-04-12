@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from brainrot_backend.api.router import api_router
 from brainrot_backend.core.config import get_settings
 from brainrot_backend.db.base import Base
+from brainrot_backend.db.schema_updates import ensure_jobs_quota_columns
 from brainrot_backend.db.session import (
     close_database_engine,
     get_database_engine,
@@ -31,6 +32,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     engine = get_database_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await ensure_jobs_quota_columns(conn)
     try:
         yield
     finally:
