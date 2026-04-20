@@ -219,4 +219,3 @@ worker/assets/**/*.mp4
 # Generated artifacts (worker output + API media)
 output/
 
-описание_проекта/
