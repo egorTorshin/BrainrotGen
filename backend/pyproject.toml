@@ -32,6 +32,10 @@ minversion = "8.0"
 addopts = "-ra --cov=src/brainrot_backend --cov-report=term-missing --cov-fail-under=60"
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Only collect files matching test_*.py — keeps locust's ``load_test.py`` out
+# of the pytest run (importing it triggers ``gevent.monkey.patch_all()`` which
+# breaks every subsequent TestClient-based test and hangs the suite).
+python_files = ["test_*.py"]
 
 [tool.black]
 line-length = 88
