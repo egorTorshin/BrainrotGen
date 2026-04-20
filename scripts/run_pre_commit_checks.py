@@ -133,7 +133,7 @@ def worker_checks() -> None:
 
 def frontend_checks() -> None:
     d = ROOT / "frontend"
-    files = ["app.py", "api.py", "duration.py", "state.py"]
+    files = ["app.py", "api.py", "duration.py", "state.py", "validators.py"]
     run_poetry(["run", "black", "--check", *files], d)
     run_poetry(["run", "flake8", *files], d)
     check_radon_cc_strict(d, *files)

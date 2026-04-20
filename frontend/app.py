@@ -1,4 +1,3 @@
-import re
 import os
 
 import streamlit as st
@@ -23,6 +22,11 @@ from state import (
     clear_job,
     current_page,
 )
+from validators import (
+    fmt_mmss as _fmt_mmss,
+    validate_password,
+    validate_username,
+)
 
 init_state()
 st.set_page_config(page_title="BrainrotGen", layout="centered")
@@ -34,32 +38,6 @@ BACKGROUND_OPTIONS = {
     "Minecraft parkour": "minecraft",
     "Subway Surfers": "subway",
 }
-
-
-def validate_username(username):
-    """Validate username format"""
-    if not username:
-        return False, "Username is required"
-    if len(username) < 3:
-        return False, "Username must be at least 3 characters"
-    if len(username) > 20:
-        return False, "Username must be less than 20 characters"
-    if not re.match(r"^[a-zA-Z0-9_]+$", username):
-        return False, "Only letters, numbers, and underscores allowed"
-    return True, ""
-
-
-def validate_password(password, confirm_password=None):
-    """Validate password strength"""
-    if not password:
-        return False, "Password is required"
-    if len(password) < 6:
-        return False, "Password must be at least 6 characters"
-    if len(password) > 50:
-        return False, "Password must be less than 50 characters"
-    if confirm_password is not None and password != confirm_password:
-        return False, "Passwords do not match"
-    return True, ""
 
 
 # =========================
@@ -176,10 +154,6 @@ def register_page():
                     )
                 else:
                     st.error(f"Registration failed: {error_msg}")
-
-
-def _fmt_mmss(total_seconds: int) -> str:
-    return f"{total_seconds // 60}:{total_seconds % 60:02d}"
 
 
 def _render_quota_dashboard(quota: dict) -> None:
