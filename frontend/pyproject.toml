@@ -17,6 +17,19 @@ black = "*"
 flake8 = "*"
 radon = "*"
 bandit = "*"
+pytest = "*"
+pytest-cov = "*"
+responses = "*"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
 
 [tool.black]
 line-length = 88

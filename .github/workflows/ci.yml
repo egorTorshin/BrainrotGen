@@ -76,24 +76,27 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Black (formatting check)
-        run: poetry run black --check app.py api.py duration.py state.py
+        run: poetry run black --check app.py api.py duration.py state.py validators.py
 
       - name: Flake8 (style conformance)
-        run: poetry run flake8 app.py api.py duration.py state.py
+        run: poetry run flake8 app.py api.py duration.py state.py validators.py
 
       - name: Radon CC (strict, cyclomatic complexity < 10)
-        run: poetry run python ../scripts/check_radon_cc_threshold.py app.py api.py duration.py state.py
+        run: poetry run python ../scripts/check_radon_cc_threshold.py app.py api.py duration.py state.py validators.py
 
       - name: Radon MI (maintainability index >= 65)
         run: |
-          poetry run radon mi -s app.py api.py duration.py state.py | tee mi_output.txt
+          poetry run radon mi -s app.py api.py duration.py state.py validators.py | tee mi_output.txt
           if grep -qE '^\s*\S+ - [CDF]' mi_output.txt; then
             echo "::error::Maintainability Index below threshold (grade C/D/F found)"
             exit 1
           fi
 
       - name: Bandit (security scan)
-        run: poetry run bandit app.py api.py duration.py state.py -ll
+        run: poetry run bandit app.py api.py duration.py state.py validators.py -ll
+
+      - name: Pytest (unit + e2e tests)
+        run: poetry run pytest tests/ -q
 
   worker:
     name: Worker Quality Gates

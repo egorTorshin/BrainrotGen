@@ -67,8 +67,12 @@ class JobStatusResponse(BaseModel):
     )
     result_path: str | None = Field(
         default=None,
-        description="Relative path to the output video file (present if status is 'done').",
-        json_schema_extra={"example": "jobs/550e8400-e29b-41d4-a716-446655440000.mp4"},
+        description=(
+            "Relative path to the output video file " "(present if status is 'done')."
+        ),
+        json_schema_extra={
+            "example": "jobs/550e8400-e29b-41d4-a716-446655440000.mp4",
+        },
     )
     error: str | None = Field(
         default=None,

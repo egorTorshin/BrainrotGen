@@ -27,8 +27,8 @@ router = APIRouter()
     response_model=QuotaResponse,
     summary="Get remaining daily quota",
     description=(
-        "Retrieves the authenticated user's generation limits and currently consumed duration. "
-        "The daily limit is reset at 00:00 UTC."
+        "Retrieves the authenticated user's generation limits and currently "
+        "consumed duration. The daily limit is reset at 00:00 UTC."
     ),
     responses={
         status.HTTP_200_OK: {"description": "Quota info retrieved successfully."},
@@ -58,7 +58,8 @@ async def get_quota(
     summary="Submit a new video generation job",
     description=(
         "Submits text for processing and enqueues a generation job. "
-        "The system estimates the duration based on text length and checks if it fits within the user's daily quota. "
+        "The system estimates the duration based on text length and checks "
+        "if it fits within the user's daily quota. "
         "If the quota is exceeded, a 429 status code is returned."
     ),
     responses={

@@ -22,7 +22,10 @@ class HealthResponse(BaseModel):
     "",
     response_model=HealthResponse,
     summary="Get service health status",
-    description="Returns the current state, service name, and version of the backend API. Used for monitoring and automated health checks.",
+    description=(
+        "Returns the current state, service name, and version of the backend "
+        "API. Used for monitoring and automated health checks."
+    ),
     responses={
         status.HTTP_200_OK: {
             "description": "Service is healthy.",

@@ -20,8 +20,15 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-ansi --no-interaction --no-root --without dev
 
-# Piper binary (single layer)
-RUN wget -q -O piper.tar.gz https://github.com/rhasspy/piper/releases/latest/download/piper_linux_x86_64.tar.gz \
+# Piper binary (single layer) — multi-arch: picks amd64 or arm64 from buildx TARGETARCH
+ARG TARGETARCH
+RUN case "${TARGETARCH:-$(dpkg --print-architecture)}" in \
+      amd64)  PIPER_ARCH=x86_64 ;; \
+      arm64)  PIPER_ARCH=aarch64 ;; \
+      armhf)  PIPER_ARCH=armv7 ;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
+    esac \
+    && wget -q -O piper.tar.gz "https://github.com/rhasspy/piper/releases/latest/download/piper_linux_${PIPER_ARCH}.tar.gz" \
     && tar -xf piper.tar.gz \
     && chmod +x /app/piper/piper \
     && rm -f piper.tar.gz

@@ -43,6 +43,34 @@ The frontend is a Streamlit-based web application providing a user interface for
 - `api.py`: Backend integration layer using `requests`.
 - `state.py`: Authentication and navigation state management.
 - `duration.py`: UI-side duration estimation (matches backend logic).
+- `validators.py`: Pure helpers for input validation and formatting.
+- `tests/`: Unit + end-to-end tests (see below).
+
+## Testing
+
+The suite combines pure-Python unit tests with end-to-end tests driven by
+Streamlit's official [`AppTest`](https://docs.streamlit.io/develop/api-reference/app-testing)
+harness (no browser required).
+
+Run everything:
+
+```bash
+poetry run pytest
+```
+
+With coverage:
+
+```bash
+poetry run pytest --cov=. --cov-report=term-missing
+```
+
+| Test file | Scope |
+|-----------|-------|
+| `tests/test_duration.py` | Unit tests for quota duration estimation helpers |
+| `tests/test_validators.py` | Unit tests for username / password / mm:ss helpers |
+| `tests/test_api.py` | HTTP contract tests for `api.py` using `responses` |
+| `tests/test_state.py` | Session-state behaviour via AppTest harness |
+| `tests/test_e2e_app.py` | Full UI flows (login → generate → preview) via AppTest with mocked backend |
 
 ## UI Flow
 
